@@ -127,6 +127,30 @@
                 </div>
             </div>
 
+            <!-- PERINGATAN BENTROK JADWAL -->
+            <div id="conflict-banner" class="hidden bg-orange-50 border border-orange-200 rounded-xl p-4">
+                <div class="flex items-start gap-2.5">
+                    <div class="p-1.5 bg-orange-100 text-orange-700 rounded-lg shrink-0"><i data-lucide="alert-triangle" class="w-4 h-4"></i></div>
+                    <div class="min-w-0">
+                        <p id="conflict-banner-title" class="text-sm font-bold text-orange-900"></p>
+                        <ul id="conflict-banner-list" class="mt-1.5 space-y-1 text-xs text-orange-800"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BEBAN KERJA REPORTER -->
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="p-1.5 bg-slate-100 rounded-lg text-slate-600"><i data-lucide="users" class="w-4 h-4"></i></div>
+                        <h3 class="text-sm font-bold text-slate-800">Beban Kerja Reporter</h3>
+                    </div>
+                    <span id="workload-scope" class="text-[11px] text-slate-400"></span>
+                </div>
+                <div id="workload-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5"></div>
+                <p id="workload-note" class="hidden text-[11px] text-slate-400 mt-3"></p>
+            </div>
+
             <!-- CONTROLS & FILTER BAR -->
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                 <div class="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
@@ -355,13 +379,19 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
-                    <button type="button" onclick="closeAgendaModal()" class="px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
-                        Batal
+                <div class="pt-3 flex items-center gap-2 border-t border-slate-100">
+                    <button type="button" id="btn-delete-agenda" onclick="deleteFromModal()" class="hidden inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        <span>Hapus</span>
                     </button>
-                    <button type="submit" class="px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-kumparan hover:bg-kumparan-dark rounded-lg transition-colors shadow-sm">
-                        Simpan Agenda
-                    </button>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <button type="button" onclick="closeAgendaModal()" class="px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
+                            Batal
+                        </button>
+                        <button type="submit" class="px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-kumparan hover:bg-kumparan-dark rounded-lg transition-colors shadow-sm">
+                            Simpan Agenda
+                        </button>
+                    </div>
                 </div>
 
             </form>
@@ -498,7 +528,11 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Google Gemini API Key</label>
-                    <input type="text" id="input-api-key" class="w-full px-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-300 outline-none" placeholder="Masukkan Gemini API Key...">
+                    <input type="password" id="input-api-key" autocomplete="off" spellcheck="false" class="w-full px-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-300 outline-none" placeholder="Masukkan Gemini API Key...">
+                    <div class="flex items-center justify-between mt-1.5 gap-2">
+                        <p id="api-key-status" class="text-[11px] text-slate-500"></p>
+                        <button type="button" id="btn-clear-key" onclick="clearApiKey()" class="hidden text-[11px] font-semibold text-red-600 hover:text-red-800 underline underline-offset-2 shrink-0">Hapus key dari browser ini</button>
+                    </div>
                 </div>
 
                 <div class="pt-1">
@@ -550,7 +584,6 @@
         const MODEL_STORAGE = 'kumparan_gemini_model';
 
         // DEFAULT SETTINGS
-        const DEFAULT_API_KEY = '';
         const DEFAULT_MODEL = 'gemini-3.5-flash';
 
         // Initial Data for Kumparan Bisnis
@@ -635,7 +668,7 @@
 
         // API KEY & MODEL GETTERS/SETTERS
         function getApiKey() {
-            return localStorage.getItem(API_KEY_STORAGE) || DEFAULT_API_KEY;
+            return localStorage.getItem(API_KEY_STORAGE) || '';
         }
 
         function getActiveModel() {
@@ -643,9 +676,6 @@
         }
 
         function initApiKeyAndModel() {
-            if (!localStorage.getItem(API_KEY_STORAGE) && DEFAULT_API_KEY) {
-                localStorage.setItem(API_KEY_STORAGE, DEFAULT_API_KEY);
-            }
             const savedModel = localStorage.getItem(MODEL_STORAGE);
             if (!savedModel || /^gemini-(1\.5|2\.0|2\.5)/.test(savedModel)) {
                 localStorage.setItem(MODEL_STORAGE, DEFAULT_MODEL);
@@ -659,7 +689,8 @@
         }
 
         function openApiKeyModal() {
-            document.getElementById('input-api-key').value = getApiKey();
+            document.getElementById('input-api-key').value = '';
+            refreshApiKeyStatus();
             document.getElementById('select-gemini-model').value = getActiveModel();
             const modal = document.getElementById('apikey-modal');
             modal.classList.remove('hidden');
@@ -672,19 +703,37 @@
             setTimeout(() => modal.classList.add('hidden'), 200);
         }
 
+        function refreshApiKeyStatus() {
+            const has = !!getApiKey();
+            const input = document.getElementById('input-api-key');
+            document.getElementById('api-key-status').innerText = has
+                ? 'Key tersimpan di browser ini (disembunyikan). Kosongkan kolom untuk tetap memakainya.'
+                : 'Belum ada key. Setiap pengguna wajib memakai API Key sendiri.';
+            input.placeholder = has ? '•••••••• (tersimpan)' : 'Masukkan Gemini API Key...';
+            document.getElementById('btn-clear-key').classList.toggle('hidden', !has);
+        }
+
         function saveApiKeySetting() {
-            const newKey = document.getElementById('input-api-key').value.trim();
+            const typedKey = document.getElementById('input-api-key').value.trim();
             const newModel = document.getElementById('select-gemini-model').value;
 
-            if (newKey) {
-                localStorage.setItem(API_KEY_STORAGE, newKey);
-                localStorage.setItem(MODEL_STORAGE, newModel);
-                updateModelBadge();
-                showToast(`Pengaturan disimpan. Menggunakan model ${newModel}`, 'success');
-                closeApiKeyModal();
-            } else {
+            if (!typedKey && !getApiKey()) {
                 showToast('API Key tidak boleh kosong', 'error');
+                return;
             }
+            if (typedKey) localStorage.setItem(API_KEY_STORAGE, typedKey);
+            localStorage.setItem(MODEL_STORAGE, newModel);
+            document.getElementById('input-api-key').value = '';
+            updateModelBadge();
+            showToast(`Pengaturan disimpan. Menggunakan model ${newModel}`, 'success');
+            closeApiKeyModal();
+        }
+
+        function clearApiKey() {
+            localStorage.removeItem(API_KEY_STORAGE);
+            document.getElementById('input-api-key').value = '';
+            refreshApiKeyStatus();
+            showToast('API Key dihapus dari browser ini', 'success');
         }
 
         // TEST CONNECTION FUNCTION
@@ -694,7 +743,7 @@
             btn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin text-indigo-700"></i> Menguji koneksi ke Google...`;
             btn.disabled = true;
 
-            const tempKey = document.getElementById('input-api-key').value.trim();
+            const tempKey = document.getElementById('input-api-key').value.trim() || getApiKey();
             const tempModel = document.getElementById('select-gemini-model').value;
 
             try {
@@ -903,9 +952,149 @@
             document.getElementById('stat-field').innerText = field;
         }
 
+        // DETEKSI BENTROK & BEBAN KERJA
+        const CONFLICT_WINDOW_MIN = 60;   // bentrok jika jam mulai selisih kurang dari 60 menit
+        const WORKLOAD_HIGH = 4;          // jumlah agenda/hari yang dianggap beban tinggi
+        const PLACEHOLDER_REPORTERS = ['reporter bisnis'];
+        let conflictMap = {};
+
+        function splitReporters(str) {
+            return (str || '')
+                .split(/\s*(?:\/|,|&|;|\bdan\b)\s*/i)
+                .map(n => n.trim())
+                .filter(n => n && !PLACEHOLDER_REPORTERS.includes(n.toLowerCase()));
+        }
+
+        function timeToMinutes(t) {
+            const m = (t || '').match(/(\d{1,2})[:.](\d{2})/);
+            if (!m) return null;
+            const h = parseInt(m[1], 10), mi = parseInt(m[2], 10);
+            if (h > 23 || mi > 59) return null;
+            return h * 60 + mi;
+        }
+
+        function computeConflicts(list) {
+            const map = {};
+            for (let i = 0; i < list.length; i++) {
+                for (let j = i + 1; j < list.length; j++) {
+                    const a = list[i], b = list[j];
+                    if (a.date !== b.date) continue;
+                    const ta = timeToMinutes(a.time), tb = timeToMinutes(b.time);
+                    if (ta === null || tb === null) continue;
+                    if (Math.abs(ta - tb) >= CONFLICT_WINDOW_MIN) continue;
+                    const namesA = splitReporters(a.reporter).map(n => n.toLowerCase());
+                    const shared = splitReporters(b.reporter).filter(n => namesA.includes(n.toLowerCase()));
+                    if (!shared.length) continue;
+                    if (!map[a.id]) map[a.id] = [];
+                    if (!map[b.id]) map[b.id] = [];
+                    map[a.id].push({ other: b, names: shared });
+                    map[b.id].push({ other: a, names: shared });
+                }
+            }
+            return map;
+        }
+
+        function getConflictNote(id) {
+            const list = conflictMap[id];
+            if (!list || !list.length) return '';
+            const text = list.map(c => `${c.names.join(', ')} juga bertugas di "${c.other.title}" (${c.other.time})`).join('; ');
+            return `<p class="text-[11px] font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-md px-2 py-1 mt-1.5 flex items-start gap-1">
+                        <i data-lucide="alert-triangle" class="w-3 h-3 shrink-0 mt-0.5"></i><span>Bentrok: ${escapeHtml(text)}</span>
+                    </p>`;
+        }
+
+        function renderInsights() {
+            conflictMap = computeConflicts(agendas);
+
+            const dateFilter = document.getElementById('filter-date').value;
+            const todayStr = getTodayStr();
+            const scope = agendas.filter(a => dateFilter === 'today' ? a.date === todayStr : true);
+            const scopeIds = new Set(scope.map(a => a.id));
+
+            // Banner bentrok
+            const banner = document.getElementById('conflict-banner');
+            const pairKeys = new Set();
+            const pairLines = [];
+            scope.forEach(a => {
+                (conflictMap[a.id] || []).forEach(c => {
+                    if (!scopeIds.has(c.other.id)) return;
+                    const key = [a.id, c.other.id].sort().join('|');
+                    if (pairKeys.has(key)) return;
+                    pairKeys.add(key);
+                    pairLines.push(`<li><strong>${escapeHtml(c.names.join(', '))}</strong>: "${escapeHtml(a.title)}" (${escapeHtml(a.time)}) &harr; "${escapeHtml(c.other.title)}" (${escapeHtml(c.other.time)})</li>`);
+                });
+            });
+            if (pairLines.length) {
+                document.getElementById('conflict-banner-title').innerText =
+                    `${pairLines.length} bentrok jadwal reporter terdeteksi (selisih jam mulai < ${CONFLICT_WINDOW_MIN} menit)`;
+                document.getElementById('conflict-banner-list').innerHTML = pairLines.join('');
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
+
+            // Beban kerja per reporter
+            const load = {};
+            let unassigned = 0;
+            scope.forEach(a => {
+                const names = splitReporters(a.reporter);
+                if (!names.length) { unassigned++; return; }
+                const isLive = a.liveType === 'live_pagi' || a.liveType === 'live_sore';
+                names.forEach(n => {
+                    const key = n.toLowerCase();
+                    if (!load[key]) load[key] = { name: n, total: 0, live: 0, field: 0, conflicts: 0 };
+                    const r = load[key];
+                    r.total++;
+                    if (isLive) r.live++; else r.field++;
+                    if ((conflictMap[a.id] || []).some(c => c.names.map(x => x.toLowerCase()).includes(key))) r.conflicts++;
+                });
+            });
+
+            const rows = Object.values(load).sort((x, y) => y.total - x.total || x.name.localeCompare(y.name));
+            const maxBar = Math.max(WORKLOAD_HIGH, ...rows.map(r => r.total));
+            document.getElementById('workload-scope').innerText = dateFilter === 'today' ? 'Hari ini' : 'Semua tanggal';
+
+            const listEl = document.getElementById('workload-list');
+            if (!rows.length) {
+                listEl.innerHTML = '<p class="text-xs text-slate-400 col-span-full">Belum ada agenda dengan reporter untuk dihitung.</p>';
+            } else {
+                listEl.innerHTML = rows.map(r => {
+                    const high = r.total >= WORKLOAD_HIGH;
+                    const barColor = high ? 'bg-red-500' : (r.total === WORKLOAD_HIGH - 1 ? 'bg-amber-500' : 'bg-kumparan');
+                    const pct = Math.round((r.total / maxBar) * 100);
+                    return `
+                    <div class="border border-slate-200 rounded-lg p-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-sm font-semibold text-slate-800 truncate">${escapeHtml(r.name)}</span>
+                            <span class="text-xs font-bold text-slate-700 shrink-0">${r.total} agenda</span>
+                        </div>
+                        <div class="h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
+                            <div class="h-full ${barColor} rounded-full" style="width:${pct}%"></div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5 mt-2 text-[10px] font-semibold">
+                            <span class="px-1.5 py-0.5 rounded bg-red-50 text-red-700">Live ${r.live}</span>
+                            <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">Lapangan ${r.field}</span>
+                            ${high ? '<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-800">Beban tinggi</span>' : ''}
+                            ${r.conflicts ? `<span class="px-1.5 py-0.5 rounded bg-orange-100 text-orange-800">Bentrok ${r.conflicts}</span>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            const note = document.getElementById('workload-note');
+            if (unassigned) {
+                note.innerText = `${unassigned} agenda belum punya reporter pasti (tidak dihitung).`;
+                note.classList.remove('hidden');
+            } else {
+                note.classList.add('hidden');
+            }
+            lucide.createIcons();
+        }
+
         // RENDER AGENDAS
         function renderAgendas() {
             updateStats();
+            renderInsights();
             const filtered = getFilteredAgendas();
             const emptyState = document.getElementById('empty-state');
             const tableBody = document.getElementById('agenda-table-body');
@@ -928,6 +1117,7 @@
                     </td>
                     <td class="py-3.5 px-4 max-w-xs sm:max-w-md">
                         <div class="font-bold text-slate-800 text-sm leading-snug hover:text-kumparan cursor-pointer" onclick="editAgenda('${item.id}')">${escapeHtml(item.title)}</div>
+                        ${getConflictNote(item.id)}
                         ${item.angle ? `<p class="text-xs text-slate-500 mt-1 line-clamp-2">${escapeHtml(item.angle)}</p>` : ''}
                         ${item.contact ? `<p class="text-[11px] text-slate-400 mt-1 flex items-center gap-1"><i data-lucide="link-2" class="w-3 h-3"></i> ${escapeHtml(item.contact)}</p>` : ''}
                     </td>
@@ -969,6 +1159,7 @@
                         </div>
 
                         <h4 class="font-bold text-slate-800 text-sm leading-snug hover:text-kumparan cursor-pointer mb-2" onclick="editAgenda('${item.id}')">${escapeHtml(item.title)}</h4>
+                        ${getConflictNote(item.id)}
                         
                         ${item.angle ? `<p class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 mb-3 whitespace-pre-line">${escapeHtml(item.angle)}</p>` : ''}
 
@@ -1031,6 +1222,7 @@
             document.getElementById('agenda-form').reset();
             document.getElementById('agenda-id').value = '';
             document.getElementById('modal-title').innerText = 'Tambah Agenda Liputan';
+            document.getElementById('btn-delete-agenda').classList.add('hidden');
             document.getElementById('input-date').value = getTodayStr();
             document.getElementById('input-live-type').value = 'reguler';
 
@@ -1068,6 +1260,7 @@
             document.getElementById('input-contact').value = agenda.contact || '';
 
             document.getElementById('modal-title').innerText = 'Edit Agenda Liputan';
+            document.getElementById('btn-delete-agenda').classList.remove('hidden');
 
             const modal = document.getElementById('agenda-modal');
             const content = document.getElementById('agenda-modal-content');
@@ -1108,6 +1301,12 @@
             saveAgendas();
             renderAgendas();
             closeAgendaModal();
+
+            const newConflicts = conflictMap[agendaData.id];
+            if (newConflicts && newConflicts.length) {
+                const c = newConflicts[0];
+                showToast(`Bentrok: ${c.names.join(', ')} juga bertugas di "${c.other.title}" (${c.other.time})`, 'warning');
+            }
         }
 
         // DELETE MODAL
@@ -1120,7 +1319,13 @@
             document.getElementById('confirm-delete-btn').onclick = () => {
                 deleteAgenda(pendingDeleteId);
                 closeDeleteModal();
+                closeAgendaModal();
             };
+        }
+
+        function deleteFromModal() {
+            const id = document.getElementById('agenda-id').value;
+            if (id) confirmDeleteAgenda(id);
         }
 
         function closeDeleteModal() {
@@ -1446,6 +1651,9 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
             if (type === 'success') {
                 bgClass = 'bg-emerald-700 text-white';
                 iconName = 'check-circle-2';
+            } else if (type === 'warning') {
+                bgClass = 'bg-orange-600 text-white';
+                iconName = 'alert-triangle';
             } else if (type === 'error') {
                 bgClass = 'bg-red-700 text-white';
                 iconName = 'alert-circle';
