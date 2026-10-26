@@ -1,445 +1,1251 @@
 <!DOCTYPE html>
-<html lang="id" class="bg-slate-50">
+<html lang="id" class="h-full bg-slate-50">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>kumparan|Bisnis - Agenda Liputan</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config={theme:{extend:{colors:{kumparan:{DEFAULT:'#0000FF',dark:'#0000CC'}},fontFamily:{sans:['Inter','sans-serif']}}}}</script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<style>
-@media(max-width:767px){
-  thead{display:none}
-  tr.row{display:block;padding:.75rem 1rem}
-  tr.row td{display:block;padding:.2rem 0!important}
-  tr.row td::before{content:attr(data-label);display:block;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em}
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kumparan|Bisnis - Agenda Redaksi & AI Penugasan Reporter</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        kumparan: {
+                            DEFAULT: '#0000FF',
+                            dark: '#0000CC',
+                            light: '#e6e6ff',
+                            accent: '#3333FF'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PDF.js library for PDF to Text Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
 </head>
-<body class="font-sans text-slate-800 antialiased min-h-screen">
+<body class="h-full flex flex-col font-sans text-slate-800 antialiased selection:bg-blue-100 selection:text-kumparan-dark">
 
-<!-- HEADER -->
-<header class="bg-white border-b border-slate-200 sticky top-0 z-30">
-  <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-2">
-    <div class="text-xl font-extrabold tracking-tight"><span class="text-kumparan">kumparan</span><span class="text-slate-300 mx-1 font-light">|</span><span class="text-slate-800 font-semibold">Bisnis</span></div>
-    <div class="flex items-center gap-2">
-      <button onclick="openApiKeyModal()" class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100">&#10024; <span id="active-model-badge">Gemini 3.5 Flash</span></button>
-      <button onclick="openAiParseModal()" class="px-3 py-2 text-sm font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg">Ekstrak Undangan (AI)</button>
-      <button onclick="openImport()" class="px-3 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Upload PDF</button>
-      <button onclick="openForm()" class="px-3 py-2 text-sm font-semibold text-white bg-kumparan hover:bg-kumparan-dark rounded-lg">+ Agenda</button>
+    <!-- MAIN APP WRAPPER -->
+    <div class="min-h-full flex flex-col">
+        
+        <!-- TOP NAVIGATION BAR -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16 items-center">
+                    
+                    <!-- Brand / Logo -->
+                    <div class="flex items-center">
+                        <div class="flex items-center text-2xl tracking-tight font-black">
+                            <span class="text-kumparan lowercase">kumparan</span>
+                            <span class="text-slate-300 mx-1 font-light">|</span>
+                            <span class="text-slate-800 font-semibold tracking-normal text-xl">Bisnis</span>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <div class="hidden xl:flex flex-col text-right pr-3 border-r border-slate-200">
+                            <span id="realtime-clock" class="text-sm font-semibold text-slate-800 tracking-tight">--:--:-- WIB</span>
+                            <span id="realtime-date" class="text-xs text-slate-500">-- --- ----</span>
+                        </div>
+
+                        <!-- AI Paste Parser Button -->
+                        <button onclick="openAiParseModal()" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-all shadow-sm focus:ring-2 focus:ring-indigo-300">
+                            <i data-lucide="wand-2" class="w-4 h-4 text-indigo-600"></i>
+                            <span class="hidden sm:inline">Ekstrak Undangan (Teks / PDF)</span> (AI)
+                        </button>
+
+                        <button onclick="openExportModal()" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm">
+                            <i data-lucide="share-2" class="w-4 h-4 text-slate-500"></i>
+                            <span class="hidden sm:inline">Format</span> WA / Briefing
+                        </button>
+
+                        <button onclick="openAgendaModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold text-white bg-kumparan rounded-lg hover:bg-kumparan-dark transition-all shadow-sm hover:shadow active:scale-95">
+                            <i data-lucide="plus" class="w-4 h-4 stroke-[3]"></i>
+                            <span>Tambah Agenda</span>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT CONTAINER -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            
+            <!-- STATS SUMMARY CARDS: TOTAL, LIVE, LAPANGAN -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Agenda</span>
+                        <div class="p-2 bg-slate-100 rounded-lg text-slate-600"><i data-lucide="calendar" class="w-4 h-4"></i></div>
+                    </div>
+                    <div class="mt-2 flex items-baseline justify-between">
+                        <span id="stat-total" class="text-2xl font-bold text-slate-800">0</span>
+                        <span class="text-xs text-slate-500">agenda liputan</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-red-600 uppercase tracking-wider">Total Agenda Live</span>
+                        <div class="p-2 bg-red-50 rounded-lg text-red-600"><i data-lucide="radio" class="w-4 h-4"></i></div>
+                    </div>
+                    <div class="mt-2 flex items-baseline justify-between">
+                        <span id="stat-live" class="text-2xl font-bold text-red-600">0</span>
+                        <span class="text-xs text-slate-400">Live Pagi / Live Sore</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-blue-600 uppercase tracking-wider">Total Agenda Lapangan</span>
+                        <div class="p-2 bg-blue-50 rounded-lg text-blue-600"><i data-lucide="map-pin" class="w-4 h-4"></i></div>
+                    </div>
+                    <div class="mt-2 flex items-baseline justify-between">
+                        <span id="stat-field" class="text-2xl font-bold text-blue-600">0</span>
+                        <span class="text-xs text-slate-400">Liputan reguler / doorstop</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTROLS & FILTER BAR -->
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <div class="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+                    
+                    <!-- Search Input -->
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <i data-lucide="search" class="w-4 h-4"></i>
+                        </div>
+                        <input type="text" id="search-input" onkeyup="renderAgendas()" placeholder="Cari isu, judul, reporter, atau lokasi..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-kumparan/20 focus:border-kumparan transition-all">
+                    </div>
+
+                    <!-- Filter Options -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+                            <i data-lucide="calendar-days" class="w-4 h-4 text-slate-400 mr-2"></i>
+                            <select id="filter-date" onchange="renderAgendas()" class="bg-transparent text-xs sm:text-sm font-medium text-slate-700 focus:outline-none cursor-pointer">
+                                <option value="all">Semua Tanggal</option>
+                                <option value="today" selected>Hari Ini</option>
+                            </select>
+                        </div>
+
+                        <!-- FILTER WAKTU -->
+                        <div class="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+                            <i data-lucide="clock" class="w-4 h-4 text-slate-400 mr-2"></i>
+                            <select id="filter-time-range" onchange="renderAgendas()" class="bg-transparent text-xs sm:text-sm font-medium text-slate-700 focus:outline-none cursor-pointer">
+                                <option value="all">Semua Waktu</option>
+                                <option value="pagi">Pagi (06:00 - 11:59)</option>
+                                <option value="siang">Siang (12:00 - 15:59)</option>
+                                <option value="sore">Sore (16:00 - 18:59)</option>
+                                <option value="malam">Malam (19:00 - 05:59)</option>
+                            </select>
+                        </div>
+
+                        <!-- FILTER PENUGASAN LIVE -->
+                        <div class="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+                            <i data-lucide="radio" class="w-4 h-4 text-slate-400 mr-2"></i>
+                            <select id="filter-live-type" onchange="renderAgendas()" class="bg-transparent text-xs sm:text-sm font-medium text-slate-700 focus:outline-none cursor-pointer">
+                                <option value="all">Semua Tipe</option>
+                                <option value="reguler">Liputan Reguler</option>
+                                <option value="live_pagi">Live Pagi</option>
+                                <option value="live_sore">Live Sore</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+                            <i data-lucide="filter" class="w-4 h-4 text-slate-400 mr-2"></i>
+                            <select id="filter-status" onchange="renderAgendas()" class="bg-transparent text-xs sm:text-sm font-medium text-slate-700 focus:outline-none cursor-pointer">
+                                <option value="all">Semua Status</option>
+                                <option value="Assigned">Assigned</option>
+                                <option value="OTW Lokasi">OTW Lokasi</option>
+                                <option value="Sedang Liputan">Sedang Liputan</option>
+                                <option value="Draft Naskah">Draft Naskah</option>
+                                <option value="Published">Published</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+                            <i data-lucide="alert-circle" class="w-4 h-4 text-slate-400 mr-2"></i>
+                            <select id="filter-priority" onchange="renderAgendas()" class="bg-transparent text-xs sm:text-sm font-medium text-slate-700 focus:outline-none cursor-pointer">
+                                <option value="all">Semua Prioritas</option>
+                                <option value="Normal">Normal</option>
+                                <option value="Breaking">Breaking News</option>
+                                <option value="Eksklusif">Eksklusif</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 ml-auto lg:ml-0">
+                            <button id="view-btn-table" onclick="setViewMode('table')" class="p-1.5 rounded-md text-slate-600 hover:text-slate-900 transition-colors" title="Tampilan Tabel">
+                                <i data-lucide="list" class="w-4 h-4"></i>
+                            </button>
+                            <button id="view-btn-card" onclick="setViewMode('card')" class="p-1.5 rounded-md text-slate-600 hover:text-slate-900 transition-colors" title="Tampilan Kartu">
+                                <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- TABLE VIEW -->
+            <div id="table-view-container" class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                <th class="py-3.5 px-4">Waktu / Tgl</th>
+                                <th class="py-3.5 px-4">Isu & Detail Liputan</th>
+                                <th class="py-3.5 px-4">Reporter</th>
+                                <th class="py-3.5 px-4">Lokasi</th>
+                                <th class="py-3.5 px-4">Tipe & Prioritas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agenda-table-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- CARD VIEW -->
+            <div id="card-view-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 hidden"></div>
+
+            <!-- EMPTY STATE -->
+            <div id="empty-state" class="hidden bg-white border border-dashed border-slate-300 rounded-xl p-12 text-center my-6">
+                <div class="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-kumparan mb-3">
+                    <i data-lucide="inbox" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-base font-semibold text-slate-800 mb-1">Tidak Ada Agenda Ditemukan</h3>
+                <p class="text-xs text-slate-500 max-w-sm mx-auto mb-4">Tidak ada jadwal liputan yang sesuai dengan kriteria pencarian Anda.</p>
+                <button onclick="resetFilters()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-kumparan bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                    <span>Reset Filter</span>
+                </button>
+            </div>
+
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="mt-auto border-t border-slate-200 bg-white py-4">
+            <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+                <p>&copy; 2026 <strong class="text-slate-700 font-semibold">kumparan|Bisnis</strong> - Sistem Manajemen Agenda Redaksi & Penugasan Reporter.</p>
+                <button onclick="openApiKeyModal()" class="text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 underline underline-offset-2">
+                    <i data-lucide="settings" class="w-3.5 h-3.5"></i> Konfigurasi Gemini Model & API Key
+                </button>
+            </div>
+        </footer>
+
     </div>
-  </div>
-</header>
 
-<main class="max-w-6xl mx-auto px-4 py-5 space-y-4">
+    <!-- MODAL: ADD / EDIT AGENDA -->
+    <div id="agenda-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-xl mx-4 overflow-hidden transform scale-95 transition-transform duration-200 max-h-[92vh] flex flex-col" id="agenda-modal-content">
+            
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 bg-blue-100 text-kumparan rounded-lg">
+                        <i data-lucide="newspaper" class="w-5 h-5"></i>
+                    </div>
+                    <h3 id="modal-title" class="font-bold text-slate-800 text-base">Tambah Agenda Liputan</h3>
+                </div>
+                <button onclick="closeAgendaModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
 
-  <!-- CARI & FILTER -->
-  <div class="flex flex-col sm:flex-row gap-2">
-    <input id="q" oninput="render()" placeholder="Cari agenda, reporter, atau lokasi..." class="flex-1 px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-kumparan">
-    <select id="fd" onchange="render()" class="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none">
-      <option value="today">Hari ini</option>
-      <option value="all">Semua tanggal</option>
-    </select>
-    <button onclick="copyWA()" class="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">Salin untuk WA</button>
-  </div>
+            <form id="agenda-form" onsubmit="handleAgendaSubmit(event)" class="p-6 space-y-4 overflow-y-auto flex-1">
+                <input type="hidden" id="agenda-id">
 
-  <!-- TABEL -->
-  <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-    <table class="w-full text-left text-sm">
-      <thead>
-        <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-          <th class="py-3 px-4">Reporter</th>
-          <th class="py-3 px-4">Agenda</th>
-          <th class="py-3 px-4">Waktu dan Jam</th>
-          <th class="py-3 px-4">Lokasi</th>
-          <th class="py-3 px-4">Catatan</th>
-        </tr>
-      </thead>
-      <tbody id="rows" class="divide-y divide-slate-100"></tbody>
-    </table>
-    <div id="empty" class="hidden p-10 text-center text-sm text-slate-500">Belum ada agenda. Klik <b>+ Agenda</b> atau <b>Upload PDF</b>.</div>
-  </div>
-  <p class="text-xs text-slate-400">Klik salah satu baris untuk melihat detail acara.</p>
-</main>
+                <!-- Judul Agenda + AI Generate Angle Button -->
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider">Judul / Isu Liputan <span class="text-red-500">*</span></label>
+                        <button type="button" onclick="generateAiAngleAndQuestions()" id="btn-ai-gen-angle" class="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded border border-indigo-200 transition-all">
+                            <i data-lucide="sparkles" class="w-3 h-3 text-indigo-500"></i>
+                            <span>AI Buat Angle & Doorstop</span>
+                        </button>
+                    </div>
+                    <input type="text" id="input-title" required placeholder="Contoh: Konferensi Pers Hasil Rapat Dewan Gubernur (RDG) Bank Indonesia" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-kumparan/20 focus:border-kumparan outline-none">
+                </div>
 
-<!-- DETAIL ACARA -->
-<div id="m-detail" class="hidden fixed inset-0 z-50 items-center justify-center bg-slate-900/50 p-4">
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-    <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-start gap-3">
-      <h3 id="d-title" class="font-bold text-base leading-snug"></h3>
-      <button onclick="closeM('m-detail')" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+                <!-- Jam & Tanggal -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Jam Liputan <span class="text-red-500">*</span></label>
+                        <input type="text" id="input-time" required placeholder="14:00 WIB" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-kumparan/20 focus:border-kumparan outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Tanggal <span class="text-red-500">*</span></label>
+                        <input type="date" id="input-date" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-kumparan/20 focus:border-kumparan outline-none">
+                    </div>
+                </div>
+
+                <!-- PENUGASAN LIVE -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Kategori Liputan / Shift Live</label>
+                    <select id="input-live-type" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-kumparan/20 focus:border-kumparan outline-none bg-white font-medium">
+                        <option value="reguler">Liputan Reguler / Doorstop Biasa</option>
+                        <option value="live_pagi">🔴 Live Pagi (Briefing & Update Pagi)</option>
+                        <option value="live_sore">🔵 Live Sore (Update & Closing Market)</option>
+                    </select>
+                </div>
+
+                <!-- Reporter & Lokasi -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Nama Reporter <span class="text-red-500">*</span></label>
+                        <input type="text" id="input-reporter" required placeholder="Misal: Esti / Najma" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-kumparan/20 focus:border-kumparan outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Lokasi <span class="text-red-500">*</span></label>
+                        <input type="text" id="input-location" required placeholder="Misal: Gd. BI Thamrin / Zoom" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-kumparan/20 focus:border-kumparan outline-none">
+                    </div>
+                </div>
+
+                <!-- Prioritas & Status -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Prioritas Liputan</label>
+                        <select id="input-priority" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-kumparan/20 focus:border-kumparan outline-none bg-white">
+                            <option value="Normal">Normal</option>
+                            <option value="Breaking">Breaking News</option>
+                            <option value="Eksklusif">Eksklusif</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Status Alur</label>
+                        <select id="input-status" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-kumparan/20 focus:border-kumparan outline-none bg-white">
+                            <option value="Assigned">Assigned</option>
+                            <option value="OTW Lokasi">OTW Lokasi</option>
+                            <option value="Sedang Liputan">Sedang Liputan</option>
+                            <option value="Draft Naskah">Draft Naskah</option>
+                            <option value="Published">Published</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Angle & Target Output -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Angle & Target Output / Panduan Doorstop</label>
+                    <textarea id="input-angle" rows="3" placeholder="Fokus keputusan BI-Rate, proyeksi pertumbuhan ekonomi, atau poin penting doorstop..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-kumparan/20 focus:border-kumparan outline-none leading-relaxed"></textarea>
+                </div>
+
+                <!-- Kontak Person / Link -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Narahubung / Link Akses (Opsional)</label>
+                    <input type="text" id="input-contact" placeholder="CP: Fenia (0821-xxx) / Tautan Zoom" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-kumparan/20 focus:border-kumparan outline-none">
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+                    <button type="button" onclick="closeAgendaModal()" class="px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
+                        Batal
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-kumparan hover:bg-kumparan-dark rounded-lg transition-colors shadow-sm">
+                        Simpan Agenda
+                    </button>
+                </div>
+
+            </form>
+        </div>
     </div>
-    <dl id="d-body" class="p-5 space-y-3 text-sm overflow-y-auto"></dl>
-    <div class="px-5 py-3 border-t border-slate-100 flex justify-between">
-      <button id="d-del" class="px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
-      <button id="d-edit" class="px-4 py-2 text-sm font-semibold text-white bg-kumparan hover:bg-kumparan-dark rounded-lg">Edit</button>
+
+    <!-- MODAL: AI PARSE UNDANGAN (DENGAN SUPPORT DOKUMEN PDF & TEXT) -->
+    <div id="ai-parse-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-xl mx-4 overflow-hidden transform scale-95 transition-transform duration-200 max-h-[90vh] flex flex-col">
+            
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-purple-50 shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 bg-indigo-600 text-white rounded-lg shadow-sm">
+                        <i data-lucide="wand-2" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base">Ekstrak Undangan dengan Gemini AI</h3>
+                        <p class="text-xs text-slate-500">Unggah file PDF atau paste pesan WhatsApp siaran pers</p>
+                    </div>
+                </div>
+                <button onclick="closeAiParseModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                
+                <!-- UPLOAD FILE PDF SECTION -->
+                <div class="bg-indigo-50/60 border border-dashed border-indigo-200 p-4 rounded-xl">
+                    <label class="block text-xs font-semibold text-indigo-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <i data-lucide="file-up" class="w-4 h-4 text-indigo-600"></i>
+                        <span>Opsi 1: Unggah Dokumen PDF Undangan</span>
+                    </label>
+                    <input type="file" id="pdf-file-input" accept="application/pdf" onchange="handlePdfUpload(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer">
+                    <p id="pdf-status-text" class="text-[11px] text-slate-500 mt-2 hidden"></p>
+                </div>
+
+                <div class="flex items-center justify-center text-xs text-slate-400 font-medium">
+                    <span>atau</span>
+                </div>
+
+                <!-- PASTE TEXT SECTION -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Opsi 2: Paste Teks Undangan / WA</label>
+                    <textarea id="raw-press-release" rows="5" placeholder="Contoh:&#10;Kementerian Koordinator Bidang Perekonomian mengundang...&#10;Hari/Tanggal: Kamis, 29 Oktober 2026&#10;Waktu: 13.30 WIB..." class="w-full p-3 text-xs leading-relaxed border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 outline-none"></textarea>
+                </div>
+
+                <div class="flex items-center justify-between pt-2">
+                    <span class="text-[11px] text-slate-400">Didukung oleh <strong id="parse-modal-engine">Gemini 3.5 Flash</strong></span>
+                    <button id="btn-parse-execute" onclick="executeAiParse()" class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow transition-all active:scale-95">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span>Ekstrak Otomatis Sekarang</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
     </div>
-  </div>
-</div>
 
-<!-- FORM TAMBAH / EDIT -->
-<div id="m-form" class="hidden fixed inset-0 z-50 items-center justify-center bg-slate-900/50 p-4">
-  <form onsubmit="saveForm(event)" class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[92vh] flex flex-col">
-    <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
-      <h3 id="f-title" class="font-bold">Tambah Agenda</h3>
-      <button type="button" onclick="closeM('m-form')" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+    <!-- MODAL: EXPORT WHATSAPP & AI BRIEFING -->
+    <div id="export-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-xl mx-4 overflow-hidden transform scale-95 transition-transform duration-200">
+            
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
+                        <i data-lucide="message-square" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base">Format Briefing WhatsApp Redaksi</h3>
+                        <p class="text-xs text-slate-500">Siap salin untuk grup WA Desk Kumparan Bisnis</p>
+                    </div>
+                </div>
+                <button onclick="closeExportModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <div class="flex gap-2">
+                    <button onclick="setBriefingTab('standard')" id="tab-btn-standard" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-white transition-all">Format Standar WA</button>
+                    <button onclick="generateAiExecutiveBriefing()" id="tab-btn-ai" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-600"></i>
+                        <span>✨ AI Executive Briefing</span>
+                    </button>
+                </div>
+
+                <div class="relative">
+                    <textarea id="export-preview-text" readonly rows="11" class="w-full p-3.5 bg-slate-900 text-slate-100 font-mono text-xs leading-relaxed rounded-xl border border-slate-700 focus:outline-none resize-none shadow-inner"></textarea>
+                </div>
+
+                <div class="flex items-center justify-between pt-2">
+                    <span class="text-xs text-slate-500">Tersusun otomatis sesuai filter tanggal.</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="downloadTxtFile()" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                            <i data-lucide="download" class="w-4 h-4 text-slate-500"></i>
+                            <span>Unduh .TXT</span>
+                        </button>
+                        <button onclick="copyExportToClipboard()" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors shadow-sm">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                            <span>Salin Teks</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
     </div>
-    <div class="p-5 space-y-3 overflow-y-auto text-sm">
-      <input type="hidden" id="f-id">
-      <label class="block"><span class="text-xs font-semibold text-slate-600">Reporter</span>
-        <input id="f-reporter" placeholder="Misal: Esti / Najma" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-kumparan"></label>
-      <label class="block"><span class="text-xs font-semibold text-slate-600">Agenda *</span>
-        <input id="f-title-in" required placeholder="Nama acara" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-kumparan"></label>
-      <div class="grid grid-cols-2 gap-3">
-        <label class="block"><span class="text-xs font-semibold text-slate-600">Tanggal *</span>
-          <input id="f-date" type="date" required class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-kumparan"></label>
-        <label class="block"><span class="text-xs font-semibold text-slate-600">Jam *</span>
-          <input id="f-time" required placeholder="14:00 WIB" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-kumparan"></label>
-      </div>
-      <label class="block"><span class="text-xs font-semibold text-slate-600">Lokasi *</span>
-        <input id="f-loc" required placeholder="Misal: Gedung BI Thamrin / Zoom" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-kumparan"></label>
-      <label class="block"><span class="text-xs font-semibold text-slate-600">Catatan</span>
-        <textarea id="f-note" rows="3" placeholder="Angle liputan, poin penting, pertanyaan doorstop..." class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-kumparan"></textarea></label>
-      <label class="block"><span class="text-xs font-semibold text-slate-600">Narahubung / Link (opsional)</span>
-        <input id="f-contact" placeholder="CP: Nama (0812-xxx) / link Zoom" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-kumparan"></label>
+
+    <!-- MODAL: SETTINGS API KEY & MODEL SELECTOR -->
+    <div id="apikey-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6 transform scale-95 transition-transform duration-200">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 bg-indigo-100 text-indigo-700 rounded-xl flex items-center justify-center shrink-0">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-slate-800">Pengaturan Gemini AI</h3>
+                    <p class="text-xs text-slate-500">Pilihan model & API Key aktif</p>
+                </div>
+            </div>
+
+            <div class="space-y-4 mb-5">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Versi Model Gemini</label>
+                    <select id="select-gemini-model" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-300 outline-none bg-white font-medium">
+                        <option value="gemini-3.5-flash">Gemini 3.5 Flash (Rekomendasi Utama)</option>
+                        <option value="gemini-3.6-flash">gemini-3.6-flash</option>
+                        <option value="gemini-3.7-flash">gemini-3.7-flash</option>
+                        <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Hemat)</option>
+                        <option value="gemini-2.5-flash">gemini-2.5-flash (Lama)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Google Gemini API Key</label>
+                    <input type="text" id="input-api-key" class="w-full px-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-300 outline-none" placeholder="Masukkan Gemini API Key...">
+                </div>
+
+                <div class="pt-1">
+                    <button type="button" onclick="testGeminiConnection()" id="btn-test-connection" class="w-full py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                        <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+                        <span>Uji Koneksi API Sekarang</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+                <button onclick="closeApiKeyModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+                    Tutup
+                </button>
+                <button onclick="saveApiKeySetting()" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-sm">
+                    Simpan Perubahan
+                </button>
+            </div>
+        </div>
     </div>
-    <div class="px-5 py-3 border-t border-slate-100 flex justify-end gap-2">
-      <button type="button" onclick="closeM('m-form')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Batal</button>
-      <button class="px-4 py-2 text-sm font-semibold text-white bg-kumparan hover:bg-kumparan-dark rounded-lg">Simpan</button>
+
+    <!-- MODAL: DELETE CONFIRMATION -->
+    <div id="delete-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6 text-center transform scale-95 transition-transform duration-200">
+            <div class="w-12 h-12 bg-blue-100 text-kumparan rounded-full flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800 mb-1">Hapus Agenda?</h3>
+            <p class="text-xs text-slate-500 mb-6">Agenda liputan ini akan dihapus permanen dari sistem.</p>
+            <div class="flex items-center justify-center gap-3">
+                <button onclick="closeDeleteModal()" class="w-full py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+                    Batal
+                </button>
+                <button id="confirm-delete-btn" class="w-full py-2 text-xs font-semibold text-white bg-kumparan hover:bg-kumparan-dark rounded-lg transition-colors shadow-sm">
+                    Ya, Hapus
+                </button>
+            </div>
+        </div>
     </div>
-  </form>
-</div>
 
-<!-- UPLOAD PDF -->
-<div id="m-import" class="hidden fixed inset-0 z-50 items-center justify-center bg-slate-900/50 p-4">
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[92vh] flex flex-col">
-    <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
-      <h3 class="font-bold">Upload Agenda PDF</h3>
-      <button onclick="closeM('m-import')" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
-    </div>
-    <div class="p-5 space-y-3 text-sm overflow-y-auto">
-      <p class="text-slate-500">Pilih file PDF undangan atau jadwal liputan. Isinya dibaca otomatis dan masuk ke tabel.</p>
-      <input id="pdf-file" type="file" accept="application/pdf" class="block w-full text-sm file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-red-50 file:text-kumparan file:font-semibold">
-      <p id="imp-status" class="text-xs text-slate-500"></p>
-    </div>
-    <div class="px-5 py-3 border-t border-slate-100 flex items-center justify-between">
-      <button onclick="openApiKeyModal()" class="text-xs text-slate-500 underline">Pengaturan API Key</button>
-      <button id="imp-btn" onclick="doImport()" class="px-4 py-2 text-sm font-semibold text-white bg-kumparan hover:bg-kumparan-dark rounded-lg disabled:opacity-50">Baca &amp; Tambahkan</button>
-    </div>
-  </div>
-</div>
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-<!-- MODAL: EKSTRAK UNDANGAN (AI) -->
-<div id="m-parse" class="hidden fixed inset-0 z-50 items-center justify-center bg-slate-900/50 p-4">
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-xl max-h-[90vh] flex flex-col">
-    <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-start gap-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-t-xl">
-      <div>
-        <h3 class="font-bold text-base">Ekstrak Undangan Liputan dengan Gemini AI</h3>
-        <p class="text-xs text-slate-500">Paste pesan WhatsApp / undangan media, Gemini akan mengisi otomatis ke form agenda</p>
-      </div>
-      <button onclick="closeM('m-parse')" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
-    </div>
-    <div class="p-5 space-y-3 overflow-y-auto">
-      <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider">Teks Undangan Liputan / Pesan Siaran Pers:</label>
-      <textarea id="raw-press-release" rows="7" placeholder="Contoh:&#10;&#10;Kepada Rekan Media Kumparan,&#10;Kementerian Koordinator Bidang Perekonomian mengundang rekan media dalam acara Media Briefing Kebijakan Insentif Pajak...&#10;Hari/Tanggal: Kamis, 29 Oktober 2026&#10;Waktu: 13.30 WIB - Selesai&#10;Tempat: Ruang Graha Sawala, Gedung AA Maramis, Jakarta Pusat&#10;Narahubung: Sarah (0812-9988-7766)" class="w-full p-3 text-xs leading-relaxed border border-slate-300 rounded-xl outline-none focus:border-indigo-500"></textarea>
-      <div class="flex items-center justify-between pt-1">
-        <span class="text-[11px] text-slate-400">Didukung oleh <strong id="parse-modal-engine">Gemini 3.5 Flash</strong></span>
-        <button id="btn-parse-execute" onclick="executeAiParse()" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50">Ekstrak Otomatis Sekarang</button>
-      </div>
-    </div>
-  </div>
-</div>
+    <!-- JAVASCRIPT LOGIC & GEMINI INTEGRATION -->
+    <script>
+        // STORAGE KEYS
+        const STORAGE_KEY = 'kumparan_bisnis_agendas_v1';
+        const API_KEY_STORAGE = 'kumparan_gemini_api_key';
+        const MODEL_STORAGE = 'kumparan_gemini_model';
 
-<!-- MODAL: PENGATURAN GEMINI -->
-<div id="m-set" class="hidden fixed inset-0 z-[60] items-center justify-center bg-slate-900/50 p-4">
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-5 space-y-4 text-sm">
-    <div>
-      <h3 class="font-bold text-base">Pengaturan Gemini AI</h3>
-      <p class="text-xs text-slate-500">Pilihan model &amp; API Key aktif</p>
-    </div>
-    <div>
-      <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Versi Model Gemini</label>
-      <select id="select-gemini-model" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none bg-white font-medium">
-        <option value="gemini-3.5-flash">Gemini 3.5 Flash (Rekomendasi Utama)</option>
-        <option value="gemini-3.6-flash">gemini-3.6-flash</option>
-        <option value="gemini-3.7-flash">gemini-3.7-flash</option>
-        <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Hemat)</option>
-        <option value="gemini-2.5-flash">gemini-2.5-flash (Lama)</option>
-      </select>
-    </div>
-    <div>
-      <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Google Gemini API Key</label>
-      <input type="text" id="input-api-key" class="w-full px-3 py-2 text-xs font-mono border border-slate-300 rounded-lg outline-none" placeholder="Masukkan Gemini API Key...">
-    </div>
-    <button type="button" onclick="testGeminiConnection()" id="btn-test-connection" class="w-full py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg">Uji Koneksi API Sekarang</button>
-    <div class="flex justify-end gap-2 border-t border-slate-100 pt-3">
-      <button onclick="closeApiKeyModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg">Tutup</button>
-      <button onclick="saveApiKeySetting()" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">Simpan Perubahan</button>
-    </div>
-  </div>
-</div>
+        // DEFAULT SETTINGS
+        const DEFAULT_API_KEY = '';
+        const DEFAULT_MODEL = 'gemini-3.5-flash';
 
-<div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-[70] hidden px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm shadow-lg"></div>
+        // Initial Data for Kumparan Bisnis
+        const initialAgendas = [
+            {
+                id: '1',
+                title: 'Konferensi Pers Hasil Rapat Dewan Gubernur (RDG) Bank Indonesia',
+                time: '14:00 WIB',
+                date: getTodayStr(),
+                location: 'Gedung Thamrin Lt. 1 Bank Indonesia, Jakarta Pusat',
+                reporter: 'Esti / Najma',
+                priority: 'Breaking',
+                status: 'OTW Lokasi',
+                liveType: 'live_sore',
+                angle: 'Pengumuman keputusan BI-Rate / suku bunga acuan, stabilitas nilai tukar Rupiah, & proyeksi inflasi.',
+                contact: 'CP: Fenia (0821-1073-4433) / Feby (0812-9752-4939)'
+            },
+            {
+                id: '2',
+                title: 'ANTARA Business Forum 2026: Prospek Ekonomi & Industri',
+                time: '08:30 WIB',
+                date: getTodayStr(),
+                location: 'ANTARA Heritage Center, Pasar Baru, Jakarta Pusat',
+                reporter: 'Fariza',
+                priority: 'Normal',
+                status: 'Sedang Liputan',
+                liveType: 'live_pagi',
+                angle: 'Paparan Menko Perekonomian dan Menkeu terkait strategi menjaga pertumbuhan ekonomi di tengah volatilitas global.',
+                contact: 'Organized by Perum LKBN ANTARA'
+            },
+            {
+                id: '3',
+                title: 'Edukasi Wartawan: Analisis Fundamental Saham dengan Mandiri Sekuritas',
+                time: '14:00 WIB',
+                date: getTodayStr(),
+                location: 'Virtual / Zoom Platform',
+                reporter: 'Widya',
+                priority: 'Normal',
+                status: 'Assigned',
+                liveType: 'reguler',
+                angle: 'Strategi valuasi saham emiten manufaktur & perbankan kuartal III di Bursa Efek Indonesia.',
+                contact: 'Link: https://bit.ly/edukasiwartawan2026'
+            },
+            {
+                id: '4',
+                title: 'Astra Media Day: Pemaparan Kinerja Bisnis Grup Astra',
+                time: '09:00 WIB',
+                date: getTodayStr(),
+                location: 'Catur Dharma Hall Lt. 5 Menara Astra, Sudirman',
+                reporter: 'Fhandra',
+                priority: 'Eksklusif',
+                status: 'Draft Naskah',
+                liveType: 'reguler',
+                angle: 'Perkembangan penjualan otomotif (Toyota, Daihatsu), jasa keuangan, serta hilirisasi tambang mineral.',
+                contact: 'CP: Minaria Chantika (0853-8353-9770)'
+            }
+        ];
 
-<script>
-const K = 'kumparan_bisnis_agendas_v1', KEY = 'kumparan_gemini_api_key', MOD = 'kumparan_gemini_model';
-const $ = id => document.getElementById(id);
-const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+        // Tanggal lokal (bukan UTC) agar "Hari Ini" benar untuk WIB dini hari
+        function getTodayStr() {
+            const d = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        }
 
-const sample = [
-  { id: '1', title: 'Konferensi Pers Hasil RDG Bank Indonesia', time: '14:00 WIB', date: today(), location: 'Gedung Thamrin Lt. 1 Bank Indonesia, Jakarta Pusat', reporter: 'Esti / Najma', angle: 'Keputusan BI-Rate, stabilitas rupiah, dan proyeksi inflasi.', contact: 'CP: Fenia (0821-1073-4433)' },
-  { id: '2', title: 'ANTARA Business Forum 2026: Prospek Ekonomi & Industri', time: '08:30 WIB', date: today(), location: 'ANTARA Heritage Center, Pasar Baru, Jakarta Pusat', reporter: 'Fariza', angle: 'Paparan Menko Perekonomian dan Menkeu soal menjaga pertumbuhan di tengah volatilitas global.', contact: '' },
-  { id: '3', title: 'Edukasi Wartawan: Analisis Fundamental Saham', time: '14:00 WIB', date: today(), location: 'Zoom', reporter: 'Widya', angle: 'Strategi valuasi saham emiten manufaktur dan perbankan.', contact: 'https://bit.ly/edukasiwartawan2026' }
-];
+        // APP STATE
+        let agendas = [];
+        let viewMode = 'table';
+        let pendingDeleteId = null;
 
-let agendas = [];
-try { agendas = JSON.parse(localStorage.getItem(K)) || sample; } catch (e) { agendas = sample; }
-const save = () => localStorage.setItem(K, JSON.stringify(agendas));
+        // INIT
+        window.addEventListener('DOMContentLoaded', () => {
+            initApiKeyAndModel();
+            loadAgendas();
+            initRealtimeClock();
+            renderAgendas();
+            updateModelBadge();
+            lucide.createIcons();
+            
+            document.getElementById('input-date').value = getTodayStr();
+        });
 
-const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-const linkify = s => esc(s).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="text-kumparan underline break-all">$1</a>');
-const tm = s => { const m = (s || '').match(/(\d{1,2})[:.](\d{2})/); return m ? m[1].padStart(2, '0') + ':' + m[2] : '99:99'; };
-const fdate = (d, long) => { if (!d) return ''; const [y, m, dd] = d.split('-'); return new Date(y, m - 1, dd).toLocaleDateString('id-ID', long ? { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' } : { weekday: 'short', day: 'numeric', month: 'short' }); };
+        // API KEY & MODEL GETTERS/SETTERS
+        function getApiKey() {
+            return localStorage.getItem(API_KEY_STORAGE) || DEFAULT_API_KEY;
+        }
 
-function toast(msg) {
-  const t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
-  clearTimeout(t._t); t._t = setTimeout(() => t.classList.add('hidden'), 3500);
-}
-function openM(id) { $(id).classList.remove('hidden'); $(id).classList.add('flex'); }
-function closeM(id) { $(id).classList.add('hidden'); $(id).classList.remove('flex'); }
+        function getActiveModel() {
+            return localStorage.getItem(MODEL_STORAGE) || DEFAULT_MODEL;
+        }
 
-// ---------- TABEL ----------
-function getList() {
-  const q = $('q').value.toLowerCase().trim(), d = $('fd').value;
-  return agendas
-    .filter(a => (d === 'all' || a.date === today()) && [a.title, a.reporter, a.location, a.angle].join(' ').toLowerCase().includes(q))
-    .sort((a, b) => (a.date + tm(a.time)).localeCompare(b.date + tm(b.time)));
-}
-function render() {
-  const list = getList();
-  $('empty').classList.toggle('hidden', list.length > 0);
-  $('rows').innerHTML = list.map(a => `
-    <tr class="row cursor-pointer hover:bg-slate-50 align-top" onclick="showDetail('${a.id}')">
-      <td data-label="Reporter" class="py-3 px-4 font-semibold whitespace-nowrap">${esc(a.reporter) || '<span class="text-slate-300 font-normal">Belum ada</span>'}</td>
-      <td data-label="Agenda" class="py-3 px-4 font-bold leading-snug max-w-sm">${esc(a.title)}</td>
-      <td data-label="Waktu dan Jam" class="py-3 px-4 whitespace-nowrap"><div class="font-semibold">${esc(a.time)}</div><div class="text-xs text-slate-400">${fdate(a.date)}</div></td>
-      <td data-label="Lokasi" class="py-3 px-4 text-slate-600 max-w-[200px]">${esc(a.location)}</td>
-      <td data-label="Catatan" class="py-3 px-4 text-slate-500 text-xs max-w-xs"><div class="line-clamp-2">${esc(a.angle)}</div></td>
-    </tr>`).join('');
-}
+        function initApiKeyAndModel() {
+            if (!localStorage.getItem(API_KEY_STORAGE) && DEFAULT_API_KEY) {
+                localStorage.setItem(API_KEY_STORAGE, DEFAULT_API_KEY);
+            }
+            const savedModel = localStorage.getItem(MODEL_STORAGE);
+            if (!savedModel || /^gemini-(1\.5|2\.0|2\.5)/.test(savedModel)) {
+                localStorage.setItem(MODEL_STORAGE, DEFAULT_MODEL);
+            }
+        }
 
-// ---------- DETAIL ACARA ----------
-function showDetail(id) {
-  const a = agendas.find(x => x.id === id); if (!a) return;
-  const row = (label, val) => val ? `<div><dt class="text-[11px] font-bold uppercase tracking-wider text-slate-400">${label}</dt><dd class="mt-0.5 whitespace-pre-line">${val}</dd></div>` : '';
-  $('d-title').textContent = a.title;
-  $('d-body').innerHTML =
-    row('Reporter', esc(a.reporter) || '<span class="text-slate-400">Belum ditentukan</span>') +
-    row('Tanggal', fdate(a.date, true)) +
-    row('Jam', esc(a.time)) +
-    row('Lokasi', esc(a.location)) +
-    row('Catatan', esc(a.angle)) +
-    row('Narahubung / Link', linkify(a.contact));
-  $('d-edit').onclick = () => { closeM('m-detail'); openForm(id); };
-  $('d-del').onclick = () => {
-    if (!confirm('Hapus agenda ini?')) return;
-    agendas = agendas.filter(x => x.id !== id); save(); render(); closeM('m-detail'); toast('Agenda dihapus');
-  };
-  openM('m-detail');
-}
+        function updateModelBadge() {
+            const model = getActiveModel();
+            const parseLabel = document.getElementById('parse-modal-engine');
+            if (parseLabel) parseLabel.innerText = model;
+        }
 
-// ---------- FORM ----------
-function openForm(id) {
-  const a = agendas.find(x => x.id === id) || { date: today() };
-  $('f-title').textContent = id ? 'Edit Agenda' : 'Tambah Agenda';
-  $('f-id').value = id || '';
-  $('f-reporter').value = a.reporter || '';
-  $('f-title-in').value = a.title || '';
-  $('f-date').value = a.date || today();
-  $('f-time').value = a.time || '';
-  $('f-loc').value = a.location || '';
-  $('f-note').value = a.angle || '';
-  $('f-contact').value = a.contact || '';
-  openM('m-form');
-}
-function saveForm(e) {
-  e.preventDefault();
-  const id = $('f-id').value;
-  const data = {
-    id: id || Date.now().toString(),
-    reporter: $('f-reporter').value.trim(), title: $('f-title-in').value.trim(),
-    date: $('f-date').value, time: $('f-time').value.trim(), location: $('f-loc').value.trim(),
-    angle: $('f-note').value.trim(), contact: $('f-contact').value.trim()
-  };
-  const i = agendas.findIndex(x => x.id === id);
-  if (i > -1) agendas[i] = data; else agendas.unshift(data);
-  save(); render(); closeM('m-form'); toast('Agenda disimpan');
-}
+        function openApiKeyModal() {
+            document.getElementById('input-api-key').value = getApiKey();
+            document.getElementById('select-gemini-model').value = getActiveModel();
+            const modal = document.getElementById('apikey-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
 
-// ---------- UPLOAD PDF ----------
-function openImport() { $('pdf-file').value = ''; $('imp-status').textContent = ''; openM('m-import'); }
+        function closeApiKeyModal() {
+            const modal = document.getElementById('apikey-modal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
 
-async function readPdf(file) {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
-  let text = '';
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const c = await (await pdf.getPage(i)).getTextContent();
-    text += c.items.map(x => x.str).join(' ') + '\n';
-  }
-  return text;
-}
+        function saveApiKeySetting() {
+            const newKey = document.getElementById('input-api-key').value.trim();
+            const newModel = document.getElementById('select-gemini-model').value;
 
-async function doImport() {
-  const file = $('pdf-file').files[0];
-  if (!file) return toast('Pilih file PDF dulu');
-  const btn = $('imp-btn'), st = $('imp-status');
-  btn.disabled = true;
-  try {
-    st.textContent = 'Membaca PDF...';
-    const text = await readPdf(file);
-    if (text.trim().length < 20) throw new Error('PDF ini tidak berisi teks (kemungkinan hasil scan).');
-    st.textContent = 'Mengekstrak agenda...';
-    const raw = await callGemini(`Ekstrak semua acara/agenda liputan dari teks berikut. Jawab HANYA array JSON, satu objek per acara:
-[{"title":"nama acara","date":"YYYY-MM-DD","time":"contoh 14:00 WIB","location":"lokasi atau platform","reporter":"nama reporter jika disebut, jika tidak kosong","note":"ringkasan singkat/angle","contact":"narahubung atau link"}]
-Hari ini ${today()}. Jika tahun tidak tertera, pakai tahun ini. Jangan mengarang data yang tidak ada di teks.
+            if (newKey) {
+                localStorage.setItem(API_KEY_STORAGE, newKey);
+                localStorage.setItem(MODEL_STORAGE, newModel);
+                updateModelBadge();
+                showToast(`Pengaturan disimpan. Menggunakan model ${newModel}`, 'success');
+                closeApiKeyModal();
+            } else {
+                showToast('API Key tidak boleh kosong', 'error');
+            }
+        }
 
-Teks:
-"""
-${text.slice(0, 30000)}
-"""`, true);
-    let arr;
-    try { arr = JSON.parse(raw); } catch (e) { arr = JSON.parse(raw.slice(raw.indexOf('['), raw.lastIndexOf(']') + 1)); }
-    if (!Array.isArray(arr)) arr = [arr];
-    arr = arr.filter(x => x && x.title);
-    if (!arr.length) throw new Error('Tidak ada agenda yang terbaca.');
-    arr.forEach((x, i) => agendas.unshift({
-      id: Date.now() + '-' + i, title: x.title, date: x.date || today(), time: x.time || '-',
-      location: x.location || '-', reporter: x.reporter || '', angle: x.note || '', contact: x.contact || ''
-    }));
-    save(); render(); closeM('m-import');
-    toast(arr.length + ' agenda ditambahkan');
-  } catch (err) {
-    st.textContent = 'Gagal: ' + err.message;
-  } finally { btn.disabled = false; }
-}
+        // TEST CONNECTION FUNCTION
+        async function testGeminiConnection() {
+            const btn = document.getElementById('btn-test-connection');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin text-indigo-700"></i> Menguji koneksi ke Google...`;
+            btn.disabled = true;
 
-// ---------- GEMINI: PENGATURAN, CALLER, EKSTRAK UNDANGAN (sama seperti versi asli) ----------
-const API_KEY_STORAGE = KEY, MODEL_STORAGE = MOD, DEFAULT_API_KEY = '', DEFAULT_MODEL = 'gemini-3.5-flash';
+            const tempKey = document.getElementById('input-api-key').value.trim();
+            const tempModel = document.getElementById('select-gemini-model').value;
 
-function getApiKey() { return localStorage.getItem(API_KEY_STORAGE) || DEFAULT_API_KEY; }
-function getActiveModel() { return localStorage.getItem(MODEL_STORAGE) || DEFAULT_MODEL; }
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${tempModel}:generateContent?key=${encodeURIComponent(tempKey)}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: "Halo, tes koneksi 1 kata saja." }] }]
+                    })
+                });
 
-function initApiKeyAndModel() {
-  if (!localStorage.getItem(API_KEY_STORAGE) && DEFAULT_API_KEY) localStorage.setItem(API_KEY_STORAGE, DEFAULT_API_KEY);
-  const savedModel = localStorage.getItem(MODEL_STORAGE);
-  if (!savedModel || /^gemini-(1\.5|2\.0|2\.5)/.test(savedModel)) localStorage.setItem(MODEL_STORAGE, DEFAULT_MODEL);
-}
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err?.error?.message || `HTTP ${response.status}`);
+                }
+                showToast(`Koneksi Sukses! Model ${tempModel} siap digunakan.`, 'success');
+            } catch (err) {
+                showToast(`Gagal: ${err.message}`, 'error');
+            } finally {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        }
 
-function updateModelBadge() {
-  const model = getActiveModel();
-  const badge = $('active-model-badge'), parseLabel = $('parse-modal-engine');
-  if (badge) badge.innerText = model.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
-  if (parseLabel) parseLabel.innerText = model;
-}
+        // GEMINI AI CALLER WITH AUTO-FALLBACK
+        async function callGemini(promptText, isJson = false) {
+            const apiKey = getApiKey();
+            if (!apiKey) throw new Error('API Key Gemini belum disetel.');
 
-function openApiKeyModal() {
-  $('input-api-key').value = getApiKey();
-  $('select-gemini-model').value = getActiveModel();
-  openM('m-set');
-}
-function closeApiKeyModal() { closeM('m-set'); }
+            const preferredModel = getActiveModel();
+            const candidateModels = [preferredModel, 'gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash']
+                .filter((v, i, a) => a.indexOf(v) === i);
 
-function saveApiKeySetting() {
-  const newKey = $('input-api-key').value.trim();
-  const newModel = $('select-gemini-model').value;
-  if (newKey) {
-    localStorage.setItem(API_KEY_STORAGE, newKey);
-    localStorage.setItem(MODEL_STORAGE, newModel);
-    updateModelBadge();
-    toast(`Pengaturan disimpan. Menggunakan model ${newModel}`);
-    closeApiKeyModal();
-  } else {
-    toast('API Key tidak boleh kosong');
-  }
-}
+            const allErrors = [];
 
-async function testGeminiConnection() {
-  const btn = $('btn-test-connection');
-  const originalHtml = btn.innerHTML;
-  btn.innerHTML = 'Menguji koneksi ke Google...';
-  btn.disabled = true;
-  const tempKey = $('input-api-key').value.trim();
-  const tempModel = $('select-gemini-model').value;
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${tempModel}:generateContent?key=${encodeURIComponent(tempKey)}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: "Halo, tes koneksi 1 kata saja." }] }] })
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `HTTP ${response.status}`);
-    }
-    toast(`Koneksi Sukses! Model ${tempModel} siap digunakan.`);
-  } catch (err) {
-    toast(`Gagal: ${err.message}`);
-  } finally {
-    btn.innerHTML = originalHtml;
-    btn.disabled = false;
-  }
-}
+            for (const model of candidateModels) {
+                try {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+                    
+                    const genConfig = { temperature: 0.2 };
+                    if (isJson) {
+                        genConfig.responseMimeType = "application/json";
+                    }
 
-async function callGemini(promptText, isJson = false) {
-  const apiKey = getApiKey();
-  if (!apiKey) { openApiKeyModal(); throw new Error('API Key Gemini belum disetel.'); }
-  const preferredModel = getActiveModel();
-  const candidateModels = [preferredModel, 'gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash']
-    .filter((v, i, a) => a.indexOf(v) === i);
-  const allErrors = [];
-  for (const model of candidateModels) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-      const genConfig = { temperature: 0.2 };
-      if (isJson) genConfig.responseMimeType = "application/json";
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }], generationConfig: genConfig })
-      });
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        allErrors.push(`[${model}] ${errJson?.error?.message || `HTTP ${response.status}`}`);
-        continue;
-      }
-      const data = await response.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) { allErrors.push(`[${model}] Mengembalikan respon kosong.`); continue; }
-      if (model !== preferredModel) { localStorage.setItem(MODEL_STORAGE, model); updateModelBadge(); }
-      return text;
-    } catch (err) {
-      allErrors.push(`[${model}] ${err.message}`);
-    }
-  }
-  throw new Error(allErrors.join(' | ') || 'Semua model Gemini gagal dihubungi.');
-}
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: promptText }] }],
+                            generationConfig: genConfig
+                        })
+                    });
 
-function openAiParseModal() { $('raw-press-release').value = ''; openM('m-parse'); }
-function closeAiParseModal() { closeM('m-parse'); }
+                    if (!response.ok) {
+                        const errJson = await response.json().catch(() => ({}));
+                        const errMsg = errJson?.error?.message || `HTTP ${response.status}`;
+                        allErrors.push(`[${model}] ${errMsg}`);
+                        continue;
+                    }
 
-async function executeAiParse() {
-  const rawText = $('raw-press-release').value.trim();
-  if (!rawText) { toast('Tempelkan teks siaran pers atau pesan undangan liputan'); return; }
+                    const data = await response.json();
+                    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!text) {
+                        allErrors.push(`[${model}] Mengembalikan respon kosong.`);
+                        continue;
+                    }
 
-  const btn = $('btn-parse-execute');
-  const originalHtml = btn.innerHTML;
-  btn.innerHTML = 'Mengekstrak dengan AI...';
-  btn.disabled = true;
+                    if (model !== preferredModel) {
+                        localStorage.setItem(MODEL_STORAGE, model);
+                        updateModelBadge();
+                    }
+                    return text;
+                } catch (err) {
+                    allErrors.push(`[${model}] ${err.message}`);
+                }
+            }
+            throw new Error(allErrors.join(' | ') || 'Semua model Gemini gagal dihubungi.');
+        }
 
-  const todayStr = today();
-  const prompt = `Anda adalah sistem parser redaksi kumparan|Bisnis.
+        // REALTIME CLOCK
+        function initRealtimeClock() {
+            const updateClock = () => {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('id-ID', { hour12: false }) + ' WIB';
+                const dateString = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                
+                document.getElementById('realtime-clock').innerText = timeString;
+                document.getElementById('realtime-date').innerText = dateString;
+            };
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        // PERSISTENCE
+        function loadAgendas() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                try {
+                    agendas = JSON.parse(stored);
+                } catch(e) {
+                    agendas = [...initialAgendas];
+                    saveAgendas();
+                }
+            } else {
+                agendas = [...initialAgendas];
+                saveAgendas();
+            }
+        }
+
+        function saveAgendas() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(agendas));
+        }
+
+        // VIEW MODE TOGGLE
+        function setViewMode(mode) {
+            viewMode = mode;
+            const tableContainer = document.getElementById('table-view-container');
+            const cardContainer = document.getElementById('card-view-container');
+            const btnTable = document.getElementById('view-btn-table');
+            const btnCard = document.getElementById('view-btn-card');
+
+            if (mode === 'table') {
+                tableContainer.classList.remove('hidden');
+                cardContainer.classList.add('hidden');
+                btnTable.classList.add('bg-white', 'text-kumparan', 'shadow-sm');
+                btnCard.classList.remove('bg-white', 'text-kumparan', 'shadow-sm');
+            } else {
+                tableContainer.classList.add('hidden');
+                cardContainer.classList.remove('hidden');
+                btnCard.classList.add('bg-white', 'text-kumparan', 'shadow-sm');
+                btnTable.classList.remove('bg-white', 'text-kumparan', 'shadow-sm');
+            }
+            renderAgendas();
+        }
+
+        // UTILITY FILTER WAKTU (PAGI, SIANG, SORE, MALAM)
+        function getTimeCategory(timeStr) {
+            if (!timeStr) return 'pagi';
+            const match = timeStr.match(/(\d{1,2})[:.](?:\d{2})/);
+            if (!match) return 'pagi';
+            const hour = parseInt(match[1], 10);
+
+            if (hour >= 6 && hour < 12) return 'pagi';
+            if (hour >= 12 && hour < 16) return 'siang';
+            if (hour >= 16 && hour < 19) return 'sore';
+            return 'malam';
+        }
+
+        // FILTER & SEARCH
+        function getFilteredAgendas() {
+            const searchKeyword = document.getElementById('search-input').value.toLowerCase().trim();
+            const dateFilter = document.getElementById('filter-date').value;
+            const timeFilter = document.getElementById('filter-time-range').value;
+            const liveFilter = document.getElementById('filter-live-type').value;
+            const statusFilter = document.getElementById('filter-status').value;
+            const priorityFilter = document.getElementById('filter-priority').value;
+            const todayStr = getTodayStr();
+
+            return agendas.filter(item => {
+                const matchSearch = item.title.toLowerCase().includes(searchKeyword) ||
+                                    item.reporter.toLowerCase().includes(searchKeyword) ||
+                                    item.location.toLowerCase().includes(searchKeyword) ||
+                                    (item.angle && item.angle.toLowerCase().includes(searchKeyword));
+
+                let matchDate = true;
+                if (dateFilter === 'today') matchDate = item.date === todayStr;
+
+                let matchTime = true;
+                if (timeFilter !== 'all') {
+                    matchTime = getTimeCategory(item.time) === timeFilter;
+                }
+
+                let matchLive = true;
+                if (liveFilter !== 'all') {
+                    const currentType = item.liveType || 'reguler';
+                    matchLive = currentType === liveFilter;
+                }
+
+                const matchStatus = statusFilter === 'all' || item.status === statusFilter;
+                const matchPriority = priorityFilter === 'all' || item.priority === priorityFilter;
+
+                return matchSearch && matchDate && matchTime && matchLive && matchStatus && matchPriority;
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('filter-date').value = 'all';
+            document.getElementById('filter-time-range').value = 'all';
+            document.getElementById('filter-live-type').value = 'all';
+            document.getElementById('filter-status').value = 'all';
+            document.getElementById('filter-priority').value = 'all';
+            renderAgendas();
+        }
+
+        // STATS: TOTAL, LIVE, LAPANGAN
+        function updateStats() {
+            const total = agendas.length;
+            const live = agendas.filter(a => a.liveType === 'live_pagi' || a.liveType === 'live_sore').length;
+            const field = total - live; // agenda non-live = liputan lapangan
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-live').innerText = live;
+            document.getElementById('stat-field').innerText = field;
+        }
+
+        // RENDER AGENDAS
+        function renderAgendas() {
+            updateStats();
+            const filtered = getFilteredAgendas();
+            const emptyState = document.getElementById('empty-state');
+            const tableBody = document.getElementById('agenda-table-body');
+            const cardContainer = document.getElementById('card-view-container');
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                tableBody.innerHTML = '';
+                cardContainer.innerHTML = '';
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            tableBody.innerHTML = filtered.map(item => `
+                <tr class="hover:bg-slate-50/80 transition-colors">
+                    <td class="py-3.5 px-4 font-medium text-slate-700 whitespace-nowrap">
+                        <div class="font-semibold text-slate-800">${escapeHtml(item.time)}</div>
+                        <div class="text-[11px] text-slate-400">${formatShortDate(item.date)}</div>
+                    </td>
+                    <td class="py-3.5 px-4 max-w-xs sm:max-w-md">
+                        <div class="font-bold text-slate-800 text-sm leading-snug hover:text-kumparan cursor-pointer" onclick="editAgenda('${item.id}')">${escapeHtml(item.title)}</div>
+                        ${item.angle ? `<p class="text-xs text-slate-500 mt-1 line-clamp-2">${escapeHtml(item.angle)}</p>` : ''}
+                        ${item.contact ? `<p class="text-[11px] text-slate-400 mt-1 flex items-center gap-1"><i data-lucide="link-2" class="w-3 h-3"></i> ${escapeHtml(item.contact)}</p>` : ''}
+                    </td>
+                    <td class="py-3.5 px-4 whitespace-nowrap">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 rounded-md text-xs font-semibold text-slate-700">
+                            <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>${escapeHtml(item.reporter)}</span>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4 text-xs text-slate-600 max-w-[180px]">
+                        <div class="flex items-start gap-1">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"></i>
+                            <span class="line-clamp-2">${escapeHtml(item.location)}</span>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4 whitespace-nowrap">
+                        <div class="flex flex-col gap-1 items-start">
+                            ${getLiveTypeBadge(item.liveType)}
+                            ${getPriorityBadge(item.priority)}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            cardContainer.innerHTML = filtered.map(item => `
+                <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow transition-all flex flex-col justify-between space-y-3">
+                    <div>
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <div class="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                                <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                                <span>${escapeHtml(item.time)}</span>
+                                <span class="text-slate-300">•</span>
+                                <span>${formatShortDate(item.date)}</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                ${getLiveTypeBadge(item.liveType)}
+                                ${getPriorityBadge(item.priority)}
+                            </div>
+                        </div>
+
+                        <h4 class="font-bold text-slate-800 text-sm leading-snug hover:text-kumparan cursor-pointer mb-2" onclick="editAgenda('${item.id}')">${escapeHtml(item.title)}</h4>
+                        
+                        ${item.angle ? `<p class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 mb-3 whitespace-pre-line">${escapeHtml(item.angle)}</p>` : ''}
+
+                        <div class="space-y-1.5 text-xs text-slate-600">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i>
+                                <span class="font-semibold text-slate-700">${escapeHtml(item.reporter)}</span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"></i>
+                                <span>${escapeHtml(item.location)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        function getLiveTypeBadge(liveType) {
+            if (liveType === 'live_pagi') {
+                return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse mr-1"></span>LIVE PAGI
+                        </span>`;
+            } else if (liveType === 'live_sore') {
+                return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-300">
+                            <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse mr-1"></span>LIVE SORE
+                        </span>`;
+            }
+            return '';
+        }
+
+        function getPriorityBadge(priority) {
+            if (priority === 'Breaking') {
+                return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse mr-1"></span>BREAKING
+                        </span>`;
+            } else if (priority === 'Eksklusif') {
+                return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">EKSKLUSIF</span>`;
+            } else {
+                return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600">NORMAL</span>`;
+            }
+        }
+
+        function formatShortDate(dateStr) {
+            if (!dateStr) return '';
+            const [y, m, d] = dateStr.split('-');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+            return `${parseInt(d)} ${months[parseInt(m)-1]}`;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // MODAL MANAGEMENT
+        function openAgendaModal() {
+            document.getElementById('agenda-form').reset();
+            document.getElementById('agenda-id').value = '';
+            document.getElementById('modal-title').innerText = 'Tambah Agenda Liputan';
+            document.getElementById('input-date').value = getTodayStr();
+            document.getElementById('input-live-type').value = 'reguler';
+
+            const modal = document.getElementById('agenda-modal');
+            const content = document.getElementById('agenda-modal-content');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeAgendaModal() {
+            const modal = document.getElementById('agenda-modal');
+            const content = document.getElementById('agenda-modal-content');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        function editAgenda(id) {
+            const agenda = agendas.find(a => a.id === id);
+            if (!agenda) return;
+
+            document.getElementById('agenda-id').value = agenda.id;
+            document.getElementById('input-title').value = agenda.title;
+            document.getElementById('input-time').value = agenda.time;
+            document.getElementById('input-date').value = agenda.date;
+            document.getElementById('input-live-type').value = agenda.liveType || 'reguler';
+            document.getElementById('input-reporter').value = agenda.reporter;
+            document.getElementById('input-location').value = agenda.location;
+            document.getElementById('input-priority').value = agenda.priority;
+            document.getElementById('input-status').value = agenda.status;
+            document.getElementById('input-angle').value = agenda.angle || '';
+            document.getElementById('input-contact').value = agenda.contact || '';
+
+            document.getElementById('modal-title').innerText = 'Edit Agenda Liputan';
+
+            const modal = document.getElementById('agenda-modal');
+            const content = document.getElementById('agenda-modal-content');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function handleAgendaSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('agenda-id').value;
+            
+            const agendaData = {
+                id: id || Date.now().toString(),
+                title: document.getElementById('input-title').value.trim(),
+                time: document.getElementById('input-time').value.trim(),
+                date: document.getElementById('input-date').value,
+                liveType: document.getElementById('input-live-type').value,
+                reporter: document.getElementById('input-reporter').value.trim(),
+                location: document.getElementById('input-location').value.trim(),
+                priority: document.getElementById('input-priority').value,
+                status: document.getElementById('input-status').value,
+                angle: document.getElementById('input-angle').value.trim(),
+                contact: document.getElementById('input-contact').value.trim()
+            };
+
+            if (id) {
+                const index = agendas.findIndex(a => a.id === id);
+                if (index !== -1) agendas[index] = agendaData;
+                showToast('Agenda liputan berhasil diperbarui', 'success');
+            } else {
+                agendas.unshift(agendaData);
+                showToast('Agenda liputan baru berhasil ditambahkan', 'success');
+            }
+
+            saveAgendas();
+            renderAgendas();
+            closeAgendaModal();
+        }
+
+        // DELETE MODAL
+        function confirmDeleteAgenda(id) {
+            pendingDeleteId = id;
+            const modal = document.getElementById('delete-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+            
+            document.getElementById('confirm-delete-btn').onclick = () => {
+                deleteAgenda(pendingDeleteId);
+                closeDeleteModal();
+            };
+        }
+
+        function closeDeleteModal() {
+            const modal = document.getElementById('delete-modal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                pendingDeleteId = null;
+            }, 200);
+        }
+
+        function deleteAgenda(id) {
+            agendas = agendas.filter(a => a.id !== id);
+            saveAgendas();
+            renderAgendas();
+            showToast('Agenda liputan telah dihapus', 'info');
+        }
+
+        // AI FEATURE 1: GENERATE ANGLE & QUESTIONS
+        async function generateAiAngleAndQuestions() {
+            const title = document.getElementById('input-title').value.trim();
+            if (!title) {
+                showToast('Ketik judul atau topik liputan terlebih dahulu', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btn-ai-gen-angle');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader" class="w-3 h-3 animate-spin text-indigo-600"></i> Memproses Gemini...`;
+            btn.disabled = true;
+
+            const prompt = `Anda adalah Redaktur Eksekutif Desk Bisnis & Finansial di kumparan (kumparan|Bisnis).
+Berdasarkan judul/isu liputan ini: "${title}"
+
+Buatkan rekomendasi ringkas dalam Bahasa Indonesia yang terdiri dari:
+1. Rekomendasi Angle Utama (1-2 kalimat tajam dan berbobot bisnis/makroekonomi)
+2. Tiga Pertanyaan Kunci Doorstop untuk Narasumber
+Format teks langsung dan padat untuk catatan reporter lapangan.`;
+
+            try {
+                const response = await callGemini(prompt, false);
+                document.getElementById('input-angle').value = response.trim();
+                showToast('Angle & pertanyaan doorstop berhasil dibuat AI!', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Gagal memproses AI: ' + err.message, 'error');
+            } finally {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        }
+
+        // PDF TO TEXT PARSER UTILITY
+        async function handlePdfUpload(event) {
+            const file = event.target.files[0];
+            const statusText = document.getElementById('pdf-status-text');
+            if (!file) return;
+
+            if (file.type !== 'application/pdf') {
+                showToast('Format file harus berupa PDF', 'error');
+                return;
+            }
+
+            statusText.classList.remove('hidden');
+            statusText.innerText = 'Membaca file PDF...';
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let fullText = '';
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + '\n';
+                }
+
+                document.getElementById('raw-press-release').value = fullText.trim();
+                statusText.innerText = `✓ Berhasil mengekstrak ${pdf.numPages} halaman PDF ke area teks!`;
+                statusText.className = "text-[11px] text-emerald-600 font-medium mt-2";
+                showToast('Teks PDF berhasil diekstrak', 'success');
+            } catch (err) {
+                console.error(err);
+                statusText.innerText = 'Gagal membaca file PDF.';
+                statusText.className = "text-[11px] text-red-600 font-medium mt-2";
+                showToast('Gagal mengekstrak PDF: ' + err.message, 'error');
+            }
+        }
+
+        // AI FEATURE 2: PARSE UNDANGAN MEDIA / WA RELEASE / PDF
+        function openAiParseModal() {
+            document.getElementById('raw-press-release').value = '';
+            document.getElementById('pdf-file-input').value = '';
+            const statusText = document.getElementById('pdf-status-text');
+            statusText.classList.add('hidden');
+            statusText.innerText = '';
+
+            const modal = document.getElementById('ai-parse-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeAiParseModal() {
+            const modal = document.getElementById('ai-parse-modal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        async function executeAiParse() {
+            const rawText = document.getElementById('raw-press-release').value.trim();
+            if (!rawText) {
+                showToast('Unggah file PDF atau paste teks undangan liputan terlebih dahulu', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btn-parse-execute');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin text-white"></i> Mengekstrak dengan AI...`;
+            btn.disabled = true;
+
+            const todayStr = getTodayStr();
+
+            const prompt = `Anda adalah sistem parser redaksi kumparan|Bisnis.
 Ekstrak informasi penting dari teks undangan liputan / siaran pers berikut ke dalam skema JSON.
 
 Teks Undangan:
@@ -454,64 +1260,215 @@ Format JSON yang harus dihasilkan:
   "date": "Tanggal acara dalam format YYYY-MM-DD. Jika tahun tidak tertera, gunakan ${todayStr.split('-')[0]}",
   "location": "Lokasi spesifik fisik atau platform online (misal: Hotel Indonesia Kempinski / Zoom)",
   "priority": "Salah satu dari: 'Normal', 'Breaking', atau 'Eksklusif'",
+  "liveType": "Salah satu dari: 'reguler', 'live_pagi', atau 'live_sore'",
   "angle": "Usulan 1 angle liputan tajam dan 2 pertanyaan doorstop penting",
   "contact": "Nama & nomor kontak narahubung atau tautan registrasi"
 }
 HANYA kembalikan objek JSON valid tanpa markdown tambahan.`;
 
-  try {
-    const aiRawResponse = await callGemini(prompt, true);
-    let parsed = null;
-    try {
-      parsed = JSON.parse(aiRawResponse);
-    } catch (parseErr) {
-      const firstBrace = aiRawResponse.indexOf('{');
-      const lastBrace = aiRawResponse.lastIndexOf('}');
-      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-        parsed = JSON.parse(aiRawResponse.substring(firstBrace, lastBrace + 1));
-      } else {
-        throw new Error('Format respon JSON tidak terbaca.');
-      }
-    }
+            try {
+                const aiRawResponse = await callGemini(prompt, true);
+                
+                let parsed = null;
+                try {
+                    parsed = JSON.parse(aiRawResponse);
+                } catch (parseErr) {
+                    const firstBrace = aiRawResponse.indexOf('{');
+                    const lastBrace = aiRawResponse.lastIndexOf('}');
+                    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                        parsed = JSON.parse(aiRawResponse.substring(firstBrace, lastBrace + 1));
+                    } else {
+                        throw new Error('Format respon JSON tidak terbaca.');
+                    }
+                }
 
-    // Isi form agenda (sama seperti versi asli)
-    openForm();
-    closeAiParseModal();
-    if (parsed.title) $('f-title-in').value = parsed.title;
-    if (parsed.time) $('f-time').value = parsed.time;
-    if (parsed.date) $('f-date').value = parsed.date;
-    if (parsed.location) $('f-loc').value = parsed.location;
-    if (parsed.angle) $('f-note').value = parsed.angle;
-    if (parsed.contact) $('f-contact').value = parsed.contact;
-    $('f-reporter').value = 'Reporter Bisnis';
-    toast('Undangan berhasil diekstrak otomatis!');
-  } catch (err) {
-    console.error('Error saat parsing AI:', err);
-    toast('Gagal mengekstrak: ' + err.message);
-  } finally {
-    btn.innerHTML = originalHtml;
-    btn.disabled = false;
-  }
-}
+                // Populate Agenda Form
+                openAgendaModal();
+                closeAiParseModal();
 
-// ---------- SALIN UNTUK WA ----------
-function copyWA() {
-  const list = getList();
-  if (!list.length) return toast('Tidak ada agenda untuk disalin');
-  let t = `*AGENDA LIPUTAN KUMPARAN BISNIS*\n${fdate(today(), true)}\n\n`;
-  list.forEach(a => {
-    t += `*${a.title}*\nReporter: ${a.reporter || '-'}\nWaktu: ${a.time}${$('fd').value === 'all' ? ' (' + fdate(a.date) + ')' : ''}\nLokasi: ${a.location}\n`;
-    if (a.angle) t += `Catatan: ${a.angle}\n`;
-    if (a.contact) t += `Kontak/Link: ${a.contact}\n`;
-    t += '\n';
-  });
-  navigator.clipboard.writeText(t.trim()).then(() => toast('Agenda disalin, tinggal tempel di WA'), () => toast('Gagal menyalin'));
-}
+                if (parsed.title) document.getElementById('input-title').value = parsed.title;
+                if (parsed.time) document.getElementById('input-time').value = parsed.time;
+                if (parsed.date) document.getElementById('input-date').value = parsed.date;
+                if (parsed.location) document.getElementById('input-location').value = parsed.location;
+                if (parsed.priority) document.getElementById('input-priority').value = parsed.priority;
+                if (parsed.liveType) document.getElementById('input-live-type').value = parsed.liveType;
+                if (parsed.angle) document.getElementById('input-angle').value = parsed.angle;
+                if (parsed.contact) document.getElementById('input-contact').value = parsed.contact;
+                document.getElementById('input-reporter').value = 'Reporter Bisnis';
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') ['m-detail', 'm-form', 'm-import', 'm-parse', 'm-set'].forEach(closeM); });
-initApiKeyAndModel();
-updateModelBadge();
-render();
-</script>
+                showToast('Undangan berhasil diekstrak otomatis!', 'success');
+            } catch (err) {
+                console.error('Error saat parsing AI:', err);
+                showToast('Gagal mengekstrak: ' + err.message, 'error');
+            } finally {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        }
+
+        // AI FEATURE 3: EXECUTIVE BRIEFING REDAKSI
+        async function generateAiExecutiveBriefing() {
+            const filtered = getFilteredAgendas();
+            if (filtered.length === 0) {
+                showToast('Tidak ada agenda hari ini untuk dianalisis oleh AI', 'error');
+                return;
+            }
+
+            const previewArea = document.getElementById('export-preview-text');
+            previewArea.value = 'Menyusun Executive Morning Briefing dengan Gemini AI... Mohon tunggu sejenak.';
+
+            document.getElementById('tab-btn-ai').classList.add('bg-indigo-600', 'text-white');
+            document.getElementById('tab-btn-standard').classList.remove('bg-slate-800', 'text-white');
+            document.getElementById('tab-btn-standard').classList.add('bg-slate-200', 'text-slate-700');
+
+            const agendaSummary = filtered.map(a => `- ${a.title} (Jam: ${a.time}, Shift: ${a.liveType || 'reguler'}, Lokasi: ${a.location}, Prioritas: ${a.priority}, Angle: ${a.angle || '-'})`).join('\n');
+
+            const prompt = `Anda adalah Redaktur Pelaksana kumparan|Bisnis.
+Berikut daftar agenda liputan terdata hari ini:
+${agendaSummary}
+
+Susun sebuah "EXECUTIVE MORNING BRIEFING" ringkas dan profesional untuk dikirim ke grup WhatsApp Desk Bisnis:
+1. Sentimen Pasar & Isu Prioritas Utama Hari Ini (Makroekonomi/Finansial/Industri).
+2. Agenda High Impact & Shift Live (Pagi/Sore) yang Wajib Dipantau Ketat oleh Korlip.
+3. Catatan Strategis Liputan untuk Tim Lapangan.
+
+Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepat oleh reporter.`;
+
+            try {
+                const response = await callGemini(prompt, false);
+                previewArea.value = response.trim();
+                showToast('Executive Briefing berhasil disusun AI!', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Gagal menyusun briefing AI: ' + err.message, 'error');
+                setBriefingTab('standard');
+            }
+        }
+
+        function setBriefingTab(tab) {
+            const previewArea = document.getElementById('export-preview-text');
+            const tabStd = document.getElementById('tab-btn-standard');
+            const tabAi = document.getElementById('tab-btn-ai');
+
+            if (tab === 'standard') {
+                tabStd.classList.add('bg-slate-800', 'text-white');
+                tabStd.classList.remove('bg-slate-200', 'text-slate-700');
+                tabAi.classList.remove('bg-indigo-600', 'text-white');
+                previewArea.value = generateWAFormatText();
+            }
+        }
+
+        // EXPORT FORMAT WA
+        function generateWAFormatText() {
+            const filtered = getFilteredAgendas();
+            const dateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+            let output = `*AGENDA REDAKSI KUMPARAN BISNIS*\n`;
+            output += `Hari/Tanggal: ${dateStr}\n`;
+            output += `Desk: Bisnis, Finansial & Makroekonomi\n`;
+            output += `------------------------------------\n\n`;
+
+            if (filtered.length === 0) {
+                output += `(Tidak ada jadwal liputan terdata)\n`;
+                return output;
+            }
+
+            filtered.forEach((item) => {
+                let liveLabel = '';
+                if (item.liveType === 'live_pagi') liveLabel = ' [🔴 LIVE PAGI]';
+                if (item.liveType === 'live_sore') liveLabel = ' [🔵 LIVE SORE]';
+
+                output += `*${item.title}*${liveLabel}\n`;
+                output += `Waktu: ${item.time}\n`;
+                output += `Lokasi: ${item.location}\n`;
+                output += `Reporter: ${item.reporter}\n`;
+                if (item.angle) output += `Angle / Target: ${item.angle}\n`;
+                if (item.contact) output += `Kontak / Link: ${item.contact}\n`;
+                output += `Status: ${item.status}\n\n`;
+            });
+
+            output += `------------------------------------\n`;
+            output += `*Catatan Redaksi:* Tetap pantau isu breaking, konfirmasi kehadiran doorstop, dan koordinasi cepat jika ada perkembangan di lapangan.`;
+
+            return output;
+        }
+
+        function openExportModal() {
+            setBriefingTab('standard');
+            const modal = document.getElementById('export-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeExportModal() {
+            const modal = document.getElementById('export-modal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        function copyExportToClipboard() {
+            const text = document.getElementById('export-preview-text').value;
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                document.execCommand('copy');
+                showToast('Teks berhasil disalin ke clipboard!', 'success');
+            } catch (err) {
+                showToast('Gagal menyalin teks', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function downloadTxtFile() {
+            const text = document.getElementById('export-preview-text').value;
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Agenda_KumparanBisnis_${getTodayStr()}.txt`;
+            link.click();
+            showToast('File agenda .txt berhasil diunduh', 'success');
+        }
+
+        // TOAST NOTIFICATIONS
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-slate-900 text-white';
+            let iconName = 'info';
+
+            if (type === 'success') {
+                bgClass = 'bg-emerald-700 text-white';
+                iconName = 'check-circle-2';
+            } else if (type === 'error') {
+                bgClass = 'bg-red-700 text-white';
+                iconName = 'alert-circle';
+            }
+
+            toast.className = `flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg font-medium text-xs transform transition-all duration-300 translate-y-5 opacity-0 pointer-events-auto ${bgClass}`;
+            toast.innerHTML = `
+                <i data-lucide="${iconName}" class="w-4 h-4 shrink-0"></i>
+                <span>${escapeHtml(message)}</span>
+            `;
+
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-5', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+    </script>
 </body>
 </html>
