@@ -78,6 +78,11 @@
                             <span class="hidden sm:inline">Format</span> WA / Briefing
                         </button>
 
+                        <button onclick="openBackupModal()" title="Cadangan data (ekspor / impor)" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm">
+                            <i data-lucide="database-backup" class="w-4 h-4 text-slate-500"></i>
+                            <span class="hidden sm:inline">Cadangan</span>
+                        </button>
+
                         <button onclick="openAgendaModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold text-white bg-kumparan rounded-lg hover:bg-kumparan-dark transition-all shadow-sm hover:shadow active:scale-95">
                             <i data-lucide="plus" class="w-4 h-4 stroke-[3]"></i>
                             <span>Tambah Agenda</span>
@@ -90,6 +95,14 @@
 
         <!-- MAIN CONTENT CONTAINER -->
         <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+            <!-- TAB UTAMA -->
+            <div class="flex gap-1 border-b border-slate-200">
+                <button id="tab-main-agenda" onclick="setMainTab('agenda')" class="px-4 py-2 text-sm font-semibold border-b-2 -mb-px text-kumparan border-kumparan">Agenda Liputan</button>
+                <button id="tab-main-output" onclick="setMainTab('output')" class="px-4 py-2 text-sm font-semibold border-b-2 -mb-px text-slate-500 border-transparent hover:text-slate-700">Output Liputan</button>
+            </div>
+
+            <div id="view-agenda" class="space-y-6">
             
             <!-- STATS SUMMARY CARDS: TOTAL, LIVE, LAPANGAN -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
@@ -196,17 +209,6 @@
                             </select>
                         </div>
 
-                        <div class="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
-                            <i data-lucide="filter" class="w-4 h-4 text-slate-400 mr-2"></i>
-                            <select id="filter-status" onchange="renderAgendas()" class="bg-transparent text-xs sm:text-sm font-medium text-slate-700 focus:outline-none cursor-pointer">
-                                <option value="all">Semua Status</option>
-                                <option value="Assigned">Assigned</option>
-                                <option value="OTW Lokasi">OTW Lokasi</option>
-                                <option value="Sedang Liputan">Sedang Liputan</option>
-                                <option value="Draft Naskah">Draft Naskah</option>
-                                <option value="Published">Published</option>
-                            </select>
-                        </div>
 
                         <div class="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
                             <i data-lucide="alert-circle" class="w-4 h-4 text-slate-400 mr-2"></i>
@@ -263,6 +265,43 @@
                     <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
                     <span>Reset Filter</span>
                 </button>
+            </div>
+
+            </div>
+
+            <!-- ===== TAB OUTPUT LIPUTAN ===== -->
+            <div id="view-output" class="hidden space-y-4">
+                <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-wrap items-center gap-x-5 gap-y-3">
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Tanggal</label>
+                        <input type="date" id="output-date" onchange="renderOutputView()" class="px-2.5 py-1.5 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-kumparan/20 bg-white">
+                    </div>
+                    <label class="inline-flex items-center gap-1.5 text-sm text-slate-700 cursor-pointer">
+                        <input type="checkbox" id="output-all-dates" onchange="renderOutputView()" class="rounded border-slate-300"> Semua tanggal
+                    </label>
+                    <label class="inline-flex items-center gap-1.5 text-sm text-slate-700 cursor-pointer">
+                        <input type="checkbox" id="output-only-pending" onchange="renderOutputView()" class="rounded border-slate-300"> Hanya yang belum terbit
+                    </label>
+                </div>
+
+                <div id="output-summary" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+
+                <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto">
+                    <table class="min-w-full text-left text-sm">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                            <tr>
+                                <th class="py-3 px-4">Agenda</th>
+                                <th class="py-3 px-3">Artikel</th>
+                                <th class="py-3 px-3">Reels</th>
+                                <th class="py-3 px-3">05</th>
+                                <th class="py-3 px-3">Boz</th>
+                            </tr>
+                        </thead>
+                        <tbody id="output-table-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                    <div id="output-empty" class="hidden p-10 text-center text-sm text-slate-400">Belum ada agenda pada tanggal ini.</div>
+                </div>
+                <p class="text-[11px] text-slate-400">Kosong (&mdash;) = tidak ada output untuk agenda itu. Isi "Direncanakan" saat penugasan, lalu ubah ke Draft / Terbit dan tempel link. Reels, 05, dan Boz adalah jenis konten reels. Data tersimpan di browser ini.</p>
             </div>
 
         </main>
@@ -356,26 +395,14 @@
                     </div>
                 </div>
 
-                <!-- Prioritas & Status -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Prioritas Liputan</label>
-                        <select id="input-priority" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-kumparan/20 focus:border-kumparan outline-none bg-white">
-                            <option value="Normal">Normal</option>
-                            <option value="Breaking">Breaking News</option>
-                            <option value="Eksklusif">Eksklusif</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Status Alur</label>
-                        <select id="input-status" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-kumparan/20 focus:border-kumparan outline-none bg-white">
-                            <option value="Assigned">Assigned</option>
-                            <option value="OTW Lokasi">OTW Lokasi</option>
-                            <option value="Sedang Liputan">Sedang Liputan</option>
-                            <option value="Draft Naskah">Draft Naskah</option>
-                            <option value="Published">Published</option>
-                        </select>
-                    </div>
+                <!-- Prioritas -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Prioritas Liputan</label>
+                    <select id="input-priority" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-kumparan/20 focus:border-kumparan outline-none bg-white">
+                        <option value="Normal">Normal</option>
+                        <option value="Breaking">Breaking News</option>
+                        <option value="Eksklusif">Eksklusif</option>
+                    </select>
                 </div>
 
                 <!-- Angle & Target Output -->
@@ -635,6 +662,39 @@
                 <button id="confirm-delete-btn" class="w-full py-2 text-xs font-semibold text-white bg-kumparan hover:bg-kumparan-dark rounded-lg transition-colors shadow-sm">
                     Ya, Hapus
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CADANGAN DATA (EKSPOR / IMPOR) -->
+    <div id="backup-modal" onclick="if(event.target===this) closeBackupModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden max-h-[92vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-base">Cadangan Data</h3>
+                    <p class="text-xs text-slate-500">Simpan atau pulihkan agenda, status output, dan isian host/PL</p>
+                </div>
+                <button onclick="closeBackupModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-5">
+                <div>
+                    <div class="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Ekspor</div>
+                    <p id="backup-summary" class="text-xs text-slate-500 mb-2"></p>
+                    <button onclick="exportBackup()" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-kumparan hover:bg-kumparan-dark rounded-lg shadow-sm">
+                        <i data-lucide="download" class="w-4 h-4"></i><span>Unduh file cadangan (.json)</span>
+                    </button>
+                </div>
+                <div class="border-t border-slate-100 pt-4">
+                    <div class="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Impor</div>
+                    <div class="space-y-1.5 text-xs text-slate-700 mb-2">
+                        <label class="flex items-start gap-2 cursor-pointer"><input type="radio" name="import-mode" value="merge" checked class="mt-0.5"><span><strong>Gabungkan</strong> dengan data sekarang. Agenda dengan ID sama ditimpa isi file.</span></label>
+                        <label class="flex items-start gap-2 cursor-pointer"><input type="radio" name="import-mode" value="replace" class="mt-0.5"><span><strong>Ganti semua</strong> data sekarang dengan isi file.</span></label>
+                    </div>
+                    <input type="file" id="backup-file-input" accept=".json,application/json" onchange="handleBackupImport(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-900 cursor-pointer">
+                </div>
+                <p class="text-[11px] text-slate-400">File cadangan adalah salinan saat diunduh, bukan sinkron otomatis. API Key Gemini tidak ikut disimpan di file.</p>
             </div>
         </div>
     </div>
@@ -973,7 +1033,6 @@
             const dateFilter = document.getElementById('filter-date').value;
             const timeFilter = document.getElementById('filter-time-range').value;
             const liveFilter = document.getElementById('filter-live-type').value;
-            const statusFilter = document.getElementById('filter-status').value;
             const priorityFilter = document.getElementById('filter-priority').value;
             const todayStr = getTodayStr();
 
@@ -997,10 +1056,9 @@
                     matchLive = currentType === liveFilter;
                 }
 
-                const matchStatus = statusFilter === 'all' || item.status === statusFilter;
                 const matchPriority = priorityFilter === 'all' || item.priority === priorityFilter;
 
-                return matchSearch && matchDate && matchTime && matchLive && matchStatus && matchPriority;
+                return matchSearch && matchDate && matchTime && matchLive && matchPriority;
             });
             return sortByTime(result);
         }
@@ -1028,7 +1086,6 @@
             document.getElementById('filter-date').value = 'all';
             document.getElementById('filter-time-range').value = 'all';
             document.getElementById('filter-live-type').value = 'all';
-            document.getElementById('filter-status').value = 'all';
             document.getElementById('filter-priority').value = 'all';
             renderAgendas();
         }
@@ -1478,7 +1535,6 @@
                         <div class="space-y-1 text-xs text-slate-600">
                             <div class="flex items-start gap-2"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"></i><span>${escapeHtml(item.location || '-')}</span></div>
                             ${partners.length ? `<div class="flex items-start gap-2"><i data-lucide="users" class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"></i><span>Bersama: ${escapeHtml(partners.join(', '))}</span></div>` : ''}
-                            <div class="flex items-start gap-2"><i data-lucide="activity" class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"></i><span>Status: <strong>${escapeHtml(item.status || '-')}</strong></span></div>
                             ${item.contact ? `<div class="flex items-start gap-2"><i data-lucide="link-2" class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"></i><span class="break-all">${escapeHtml(item.contact)}</span></div>` : ''}
                         </div>
                         ${item.angle ? `<p class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 whitespace-pre-line"><strong>Angle:</strong> ${escapeHtml(item.angle)}</p>` : ''}
@@ -1593,7 +1649,6 @@
             document.getElementById('input-reporter').value = agenda.reporter;
             document.getElementById('input-location').value = agenda.location;
             document.getElementById('input-priority').value = agenda.priority;
-            document.getElementById('input-status').value = agenda.status;
             document.getElementById('input-angle').value = agenda.angle || '';
             document.getElementById('input-contact').value = agenda.contact || '';
 
@@ -1627,14 +1682,13 @@
                 reporter: document.getElementById('input-reporter').value.trim(),
                 location: document.getElementById('input-location').value.trim(),
                 priority: document.getElementById('input-priority').value,
-                status: document.getElementById('input-status').value,
                 angle: document.getElementById('input-angle').value.trim(),
                 contact: document.getElementById('input-contact').value.trim()
             };
 
             if (id) {
                 const index = agendas.findIndex(a => a.id === id);
-                if (index !== -1) agendas[index] = agendaData;
+                if (index !== -1) { agendaData.outputs = agendas[index].outputs; agendas[index] = agendaData; }
                 showToast('Agenda liputan berhasil diperbarui', 'success');
             } else {
                 agendas.unshift(agendaData);
@@ -2217,6 +2271,233 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
             link.download = `Agenda_KumparanBisnis_${currentBriefingTab === 'standard' ? getExportDate() : getTodayStr()}.txt`;
             link.click();
             showToast('File agenda .txt berhasil diunduh', 'success');
+        }
+
+        // ===== CADANGAN DATA (EKSPOR / IMPOR) =====
+        const BACKUP_FORMAT = 'kumparan-bisnis-backup';
+        const BACKUP_VERSION = 1;
+        const AGENDA_STR_FIELDS = ['title', 'time', 'session', 'date', 'liveType', 'reporter', 'location', 'priority', 'status', 'angle', 'contact'];
+
+        function openBackupModal() {
+            const n = agendas.length;
+            document.getElementById('backup-summary').innerText = `${n} agenda akan disimpan, termasuk status output dan isian host/PL.`;
+            document.getElementById('backup-file-input').value = '';
+            const modal = document.getElementById('backup-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+            lucide.createIcons();
+        }
+
+        function closeBackupModal() {
+            const modal = document.getElementById('backup-modal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        function exportBackup() {
+            const payload = {
+                format: BACKUP_FORMAT,
+                version: BACKUP_VERSION,
+                exportedAt: new Date().toISOString(),
+                agendas: agendas,
+                waSettings: readAllWaSettings()
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `kumparan-bisnis-cadangan-${getTodayStr()}.json`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+            showToast(`Cadangan ${agendas.length} agenda berhasil diunduh`, 'success');
+        }
+
+        // Bersihkan satu agenda dari file impor: hanya field yang dikenal, tipe dipaksa aman
+        function sanitizeImportedAgenda(a) {
+            if (!a || typeof a !== 'object' || typeof a.title !== 'string' || !a.title.trim()) return null;
+            const out = { id: String(a.id || (Date.now() + Math.random().toString(36).slice(2, 8))) };
+            AGENDA_STR_FIELDS.forEach(f => { out[f] = typeof a[f] === 'string' ? a[f] : ''; });
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(out.date)) out.date = getTodayStr();
+            if (!['reguler', 'live_pagi', 'live_sore'].includes(out.liveType)) out.liveType = 'reguler';
+            if (!['Normal', 'Breaking', 'Eksklusif'].includes(out.priority)) out.priority = 'Normal';
+            if (!['', 'pagi', 'siang', 'sore', 'malam'].includes(out.session)) out.session = '';
+            if (a.outputs && typeof a.outputs === 'object') {
+                out.outputs = {};
+                OUTPUT_TYPES.forEach(t => {
+                    const o = a.outputs[t.key];
+                    if (!o || typeof o !== 'object') return;
+                    const st = ['rencana', 'draft', 'terbit'].includes(o.status) ? o.status : '';
+                    const link = typeof o.link === 'string' ? o.link : '';
+                    if (st || link) out.outputs[t.key] = { status: st, link };
+                });
+            }
+            return out;
+        }
+
+        async function handleBackupImport(event) {
+            const file = event.target.files[0];
+            event.target.value = '';
+            if (!file) return;
+            try {
+                const data = JSON.parse(await file.text());
+                if (!data || data.format !== BACKUP_FORMAT || !Array.isArray(data.agendas)) {
+                    throw new Error('Ini bukan file cadangan kumparan|Bisnis');
+                }
+                const incoming = data.agendas.map(sanitizeImportedAgenda).filter(Boolean);
+                const skipped = data.agendas.length - incoming.length;
+                const mode = document.querySelector('input[name="import-mode"]:checked').value;
+
+                if (mode === 'replace') {
+                    if (!confirm(`Ganti SEMUA data sekarang (${agendas.length} agenda) dengan ${incoming.length} agenda dari file?\nData sekarang akan hilang kecuali sudah diekspor.`)) return;
+                    agendas = incoming;
+                } else {
+                    const byId = new Map(agendas.map(a => [a.id, a]));
+                    incoming.forEach(a => byId.set(a.id, a));
+                    agendas = Array.from(byId.values());
+                }
+                saveAgendas();
+
+                // Isian host/PL per tanggal
+                if (data.waSettings && typeof data.waSettings === 'object') {
+                    const current = mode === 'replace' ? {} : readAllWaSettings();
+                    Object.entries(data.waSettings).forEach(([d, v]) => {
+                        if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !v || typeof v !== 'object') return;
+                        const clean = {};
+                        Object.keys(WA_FIELDS).forEach(k => { clean[k] = typeof v[k] === 'string' ? v[k] : ''; });
+                        current[d] = clean;
+                    });
+                    try { localStorage.setItem(WA_SETTINGS_KEY, JSON.stringify(current)); } catch (e) {}
+                }
+
+                renderAgendas();
+                if (!document.getElementById('view-output').classList.contains('hidden')) renderOutputView();
+                closeBackupModal();
+                showToast(`${incoming.length} agenda berhasil diimpor${skipped ? `, ${skipped} dilewati (tidak valid)` : ''}`, 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Gagal impor: ' + (err instanceof SyntaxError ? 'file bukan JSON yang valid' : err.message), 'error');
+            }
+        }
+
+        // ===== TAB OUTPUT LIPUTAN =====
+        const OUTPUT_TYPES = [
+            { key: 'artikel', label: 'Artikel' },
+            { key: 'reels',   label: 'Reels' },
+            { key: 'o5',      label: '05' },
+            { key: 'boz',     label: 'Boz' }
+        ];
+        const OUTPUT_STATUSES = [
+            { value: '',        label: '\u2014',        cls: 'bg-slate-50 text-slate-400 border-slate-200' },
+            { value: 'rencana', label: 'Direncanakan', cls: 'bg-amber-50 text-amber-800 border-amber-200' },
+            { value: 'draft',   label: 'Draft',        cls: 'bg-blue-50 text-blue-800 border-blue-200' },
+            { value: 'terbit',  label: 'Terbit',       cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' }
+        ];
+
+        function getOutput(a, key) {
+            const o = a.outputs && a.outputs[key];
+            return { status: (o && o.status) || '', link: (o && o.link) || '' };
+        }
+
+        function setMainTab(tab) {
+            const isOutput = tab === 'output';
+            document.getElementById('view-agenda').classList.toggle('hidden', isOutput);
+            document.getElementById('view-output').classList.toggle('hidden', !isOutput);
+            const on = ['text-kumparan', 'border-kumparan'];
+            const off = ['text-slate-500', 'border-transparent', 'hover:text-slate-700'];
+            const bAg = document.getElementById('tab-main-agenda');
+            const bOut = document.getElementById('tab-main-output');
+            [[bAg, !isOutput], [bOut, isOutput]].forEach(([b, active]) => {
+                on.forEach(c => b.classList.toggle(c, active));
+                off.forEach(c => b.classList.toggle(c, !active));
+            });
+            if (isOutput) renderOutputView();
+        }
+
+        function setOutputStatus(id, key, value) {
+            const a = agendas.find(x => x.id === id);
+            if (!a) return;
+            if (!a.outputs) a.outputs = {};
+            a.outputs[key] = { status: value, link: (a.outputs[key] && a.outputs[key].link) || '' };
+            saveAgendas();
+            renderOutputView();
+        }
+
+        function setOutputLink(id, key, value) {
+            const a = agendas.find(x => x.id === id);
+            if (!a) return;
+            if (!a.outputs) a.outputs = {};
+            a.outputs[key] = { status: (a.outputs[key] && a.outputs[key].status) || '', link: value.trim() };
+            saveAgendas();
+            renderOutputView();
+        }
+
+        function outputCellHtml(a, t) {
+            const o = getOutput(a, t.key);
+            const st = OUTPUT_STATUSES.find(x => x.value === o.status) || OUTPUT_STATUSES[0];
+            const opts = OUTPUT_STATUSES.map(x => `<option value="${x.value}" ${x.value === o.status ? 'selected' : ''}>${x.label}</option>`).join('');
+            let linkHtml = '';
+            if (o.status === 'draft' || o.status === 'terbit') {
+                const safe = /^https?:\/\//i.test(o.link);
+                linkHtml = `<div class="flex items-center gap-1 mt-1.5">
+                    <input type="text" value="${escapeHtml(o.link)}" placeholder="Tempel link" onchange="setOutputLink('${a.id}', '${t.key}', this.value)" class="min-w-0 flex-1 px-2 py-1 text-[11px] border border-slate-300 rounded-md outline-none focus:ring-2 focus:ring-kumparan/20">
+                    ${safe ? `<a href="${escapeHtml(o.link)}" target="_blank" rel="noopener noreferrer" title="Buka link" class="text-kumparan hover:text-kumparan-dark text-xs font-bold px-1">&#8599;</a>` : ''}
+                </div>`;
+            }
+            return `<td class="py-3 px-3 align-top min-w-[150px]">
+                <select onchange="setOutputStatus('${a.id}', '${t.key}', this.value)" class="w-full text-xs font-semibold rounded-md border px-2 py-1 outline-none ${st.cls}">${opts}</select>
+                ${linkHtml}
+            </td>`;
+        }
+
+        function renderOutputView() {
+            const dateInput = document.getElementById('output-date');
+            if (!dateInput.value) dateInput.value = getTodayStr();
+            const allDates = document.getElementById('output-all-dates').checked;
+            const onlyPending = document.getElementById('output-only-pending').checked;
+            dateInput.disabled = allDates;
+
+            let list = agendas.filter(a => allDates || a.date === dateInput.value);
+
+            // Ringkasan per jenis output (dihitung dari agenda pada cakupan tanggal, sebelum filter "belum terbit")
+            document.getElementById('output-summary').innerHTML = OUTPUT_TYPES.map(t => {
+                const c = { rencana: 0, draft: 0, terbit: 0 };
+                list.forEach(a => { const s = getOutput(a, t.key).status; if (s) c[s]++; });
+                return `<div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+                    <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">${t.label}</div>
+                    <div class="text-2xl font-bold text-emerald-700 mt-1">${c.terbit}<span class="text-xs font-semibold text-slate-400 ml-1">terbit</span></div>
+                    <div class="text-[11px] text-slate-500 mt-0.5">${c.draft} draft &middot; ${c.rencana} direncanakan</div>
+                </div>`;
+            }).join('');
+
+            if (onlyPending) {
+                list = list.filter(a => OUTPUT_TYPES.some(t => {
+                    const s = getOutput(a, t.key).status;
+                    return s === 'rencana' || s === 'draft';
+                }));
+            }
+
+            // Tanggal terbaru dulu, lalu urut jam
+            list = [...list].sort((a, b) => (a.date === b.date ? sortMinutes(a) - sortMinutes(b) : (a.date < b.date ? 1 : -1)));
+
+            const body = document.getElementById('output-table-body');
+            const empty = document.getElementById('output-empty');
+            if (!list.length) {
+                body.innerHTML = '';
+                empty.classList.remove('hidden');
+                empty.innerText = onlyPending ? 'Tidak ada output yang belum terbit.' : 'Belum ada agenda pada tanggal ini.';
+                return;
+            }
+            empty.classList.add('hidden');
+
+            body.innerHTML = list.map(a => `
+                <tr class="hover:bg-slate-50/60">
+                    <td class="py-3 px-4 align-top max-w-xs">
+                        <div class="font-bold text-slate-800 text-sm leading-snug">${escapeHtml(a.title)}</div>
+                        <div class="text-[11px] text-slate-500 mt-1">${a.time ? escapeHtml(a.time) : 'Stanby'} &middot; ${escapeHtml(a.reporter || '-')}${allDates ? ' &middot; ' + formatShortDate(a.date) : ''}</div>
+                    </td>
+                    ${OUTPUT_TYPES.map(t => outputCellHtml(a, t)).join('')}
+                </tr>`).join('');
         }
 
         // TOAST NOTIFICATIONS
