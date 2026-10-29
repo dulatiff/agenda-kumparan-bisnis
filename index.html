@@ -78,6 +78,12 @@
                             <span class="hidden sm:inline">Format</span> WA / Briefing
                         </button>
 
+                        <!-- Clear Agenda Button -->
+                        <button onclick="openClearAgendaModal()" title="Hapus agenda masal" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors shadow-sm">
+                            <i data-lucide="trash-2" class="w-4 h-4 text-red-600"></i>
+                            <span class="hidden sm:inline">Bersihkan Agenda</span>
+                        </button>
+
                         <button onclick="openBackupModal()" title="Cadangan data (ekspor / impor)" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm">
                             <i data-lucide="database-backup" class="w-4 h-4 text-slate-500"></i>
                             <span class="hidden sm:inline">Cadangan</span>
@@ -244,6 +250,7 @@
                                 <th class="py-3.5 px-4">Reporter</th>
                                 <th class="py-3.5 px-4">Lokasi</th>
                                 <th class="py-3.5 px-4">Tipe & Prioritas</th>
+                                <th class="py-3.5 px-4 text-right">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="agenda-table-body" class="divide-y divide-slate-100 text-sm"></tbody>
@@ -644,6 +651,53 @@
                 </button>
             </div>
             <div id="reporter-modal-body" class="p-5 space-y-3 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- MODAL: BERSAPU / CLEAR AGENDA MASAL -->
+    <div id="clear-agenda-modal" onclick="if(event.target===this) closeClearAgendaModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-red-50/60">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 bg-red-100 text-red-700 rounded-lg">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base">Bersihkan Agenda Masal</h3>
+                        <p class="text-xs text-slate-500">Pilih opsi pembersihan agenda redaksi</p>
+                    </div>
+                </div>
+                <button onclick="closeClearAgendaModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="space-y-3">
+                    <button onclick="clearPastAgendas()" class="w-full text-left p-3.5 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-xl transition-all flex items-start gap-3">
+                        <div class="p-2 bg-amber-50 text-amber-600 rounded-lg shrink-0"><i data-lucide="history" class="w-4 h-4"></i></div>
+                        <div>
+                            <div class="text-xs font-bold text-slate-800">Hapus Agenda Lampau (Sebelum Hari Ini)</div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">Menghapus semua agenda yang tanggalnya sudah lewat. Agenda hari ini & mendatang tetap aman.</div>
+                        </div>
+                    </button>
+
+                    <button onclick="clearTodayAgendas()" class="w-full text-left p-3.5 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-xl transition-all flex items-start gap-3">
+                        <div class="p-2 bg-blue-50 text-blue-600 rounded-lg shrink-0"><i data-lucide="calendar-x" class="w-4 h-4"></i></div>
+                        <div>
+                            <div class="text-xs font-bold text-slate-800">Hapus Semua Agenda Hari Ini</div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">Mengosongkan jadwal khusus untuk tanggal hari ini saja.</div>
+                        </div>
+                    </button>
+
+                    <button onclick="clearAllAgendas()" class="w-full text-left p-3.5 border border-red-200 bg-red-50/30 hover:bg-red-50 rounded-xl transition-all flex items-start gap-3">
+                        <div class="p-2 bg-red-100 text-red-600 rounded-lg shrink-0"><i data-lucide="alert-octagon" class="w-4 h-4"></i></div>
+                        <div>
+                            <div class="text-xs font-bold text-red-900">Kosongkan Seluruh Agenda (Reset Total)</div>
+                            <div class="text-[11px] text-red-700 mt-0.5">Hapus semua data agenda yang tersimpan di sistem tanpa terkecuali.</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1064,12 +1118,10 @@
         }
 
         // Urutkan HANYA berdasarkan jam (00:00 -> 23:59). Jam tak terbaca ditaruh paling akhir.
-        // Array.sort stabil, jadi agenda dengan jam sama tetap urut sesuai input.
         function sortByTime(list) {
             return [...list].sort((a, b) => sortMinutes(a) - sortMinutes(b));
         }
 
-        // Menit untuk pengurutan: jam bila ada, jika kosong pakai awal sesi (Stanby), jika tak ada sama sekali di paling akhir
         function sortMinutes(item) {
             const m = timeToMinutes(item.time);
             if (m !== null) return m;
@@ -1094,7 +1146,7 @@
         function updateStats() {
             const total = agendas.length;
             const live = agendas.filter(a => a.liveType === 'live_pagi' || a.liveType === 'live_sore').length;
-            const field = total - live; // agenda non-live = liputan lapangan
+            const field = total - live;
 
             document.getElementById('stat-total').innerText = total;
             document.getElementById('stat-live').innerText = live;
@@ -1102,8 +1154,8 @@
         }
 
         // DETEKSI BENTROK & BEBAN KERJA
-        const CONFLICT_WINDOW_MIN = 60;   // bentrok jika jam mulai selisih kurang dari 60 menit
-        const WORKLOAD_HIGH = 4;          // jumlah agenda/hari yang dianggap beban tinggi
+        const CONFLICT_WINDOW_MIN = 60;
+        const WORKLOAD_HIGH = 4;
         const PLACEHOLDER_REPORTERS = ['reporter bisnis'];
         let conflictMap = {};
 
@@ -1249,7 +1301,7 @@
             lucide.createIcons();
         }
 
-        // ===== SESI WAKTU (pemisah grup) =====
+        // SESI WAKTU
         const SESSIONS = [
             { key: 'dini',  label: 'Dini Hari', range: '00:00–05:59', from: 0,    to: 359  },
             { key: 'pagi',  label: 'Pagi',      range: '06:00–11:59', from: 360,  to: 719  },
@@ -1265,14 +1317,12 @@
             return SESSIONS.find(s => m >= s.from && m <= s.to) || SESSION_UNKNOWN;
         }
 
-        // Sesi agenda: dari jam; bila jam kosong pakai Sesi yang dipilih
         function getItemSession(item) {
             if (timeToMinutes(item.time) !== null) return getSession(item.time);
             const sess = SESSIONS.find(x => x.key === item.session);
             return sess || SESSION_UNKNOWN;
         }
 
-        // Pemisah muncul hanya di agenda pertama tiap sesi
         function getSessionHeaderData(list, idx) {
             const cur = getItemSession(list[idx]);
             if (idx > 0 && getItemSession(list[idx - 1]).key === cur.key) return null;
@@ -1299,11 +1349,10 @@
                     </div>`;
         }
 
-        // ===== STATUS WAKTU: lewat / sedang berlangsung / berikutnya =====
-        const ONGOING_WINDOW_MIN = 60; // agenda dianggap "berlangsung" selama 60 menit sejak jam mulai
+        // STATUS WAKTU
+        const ONGOING_WINDOW_MIN = 60;
         let timeStatusMap = {};
 
-        // Status lewat / berlangsung (global per agenda)
         function computeTimeStatus(list) {
             const map = {};
             const now = new Date();
@@ -1318,7 +1367,6 @@
             return map;
         }
 
-        // BERIKUTNYA dihitung PER REPORTER: agenda hari ini terdekat setelah jam sekarang milik tiap reporter
         let reporterNext = { byAgenda: {}, byReporter: {}, todayReporters: new Set() };
 
         function computeReporterNext() {
@@ -1418,7 +1466,7 @@
                 emptyState.classList.add('hidden');
             }
 
-            tableBody.innerHTML = filtered.map((item, idx) => sessionHeaderRow(filtered, idx, 5) + `
+            tableBody.innerHTML = filtered.map((item, idx) => sessionHeaderRow(filtered, idx, 6) + `
                 <tr class="hover:bg-slate-50/80 transition-colors ${rowStateClass(item.id)}">
                     <td class="py-3.5 px-4 font-medium text-slate-700 whitespace-nowrap ${rowEdgeClass(item.id)}">
                         <div class="font-semibold text-slate-800">${timeLabel(item)}</div>
@@ -1447,6 +1495,19 @@
                         <div class="flex flex-col gap-1 items-start">
                             ${getLiveTypeBadge(item.liveType)}
                             ${getPriorityBadge(item.priority)}
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                        <div class="flex items-center justify-end gap-1">
+                            <button onclick="duplicateAgenda('${item.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded-md hover:bg-indigo-50 transition-colors" title="Duplikat Agenda">
+                                <i data-lucide="copy" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="editAgenda('${item.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded-md hover:bg-blue-50 transition-colors" title="Edit Agenda">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="confirmDeleteAgenda('${item.id}')" class="p-1.5 text-slate-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors" title="Hapus Agenda">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -1485,13 +1546,24 @@
                             </div>
                         </div>
                     </div>
+                    <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-1">
+                        <button onclick="duplicateAgenda('${item.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded-md hover:bg-indigo-50 transition-colors" title="Duplikat Agenda">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="editAgenda('${item.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded-md hover:bg-blue-50 transition-colors" title="Edit Agenda">
+                            <i data-lucide="edit-3" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="confirmDeleteAgenda('${item.id}')" class="p-1.5 text-slate-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors" title="Hapus Agenda">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
                 </div>
             `).join('');
 
             lucide.createIcons();
         }
 
-        // Nama reporter -> tombol yang bisa diklik (mendukung "Esti / Najma")
+        // Nama reporter -> tombol yang bisa diklik
         function reporterLinks(str) {
             const names = splitReporters(str);
             if (!names.length) return escapeHtml(str || '-');
@@ -1549,7 +1621,6 @@
             lucide.createIcons();
         }
 
-        // Jeda antar agenda reporter (selisih jam mulai) + penanda berikutnya
         function gapBefore(list, i) {
             if (i === 0) return '';
             const prev = list[i - 1], cur = list[i];
@@ -1664,6 +1735,23 @@
             }, 10);
         }
 
+        // FITUR BARU: DUPLIKAT AGENDA
+        function duplicateAgenda(id) {
+            const agenda = agendas.find(a => a.id === id);
+            if (!agenda) return;
+
+            const copy = {
+                ...JSON.parse(JSON.stringify(agenda)),
+                id: Date.now().toString(),
+                title: `${agenda.title} (Salinan)`
+            };
+
+            agendas.unshift(copy);
+            saveAgendas();
+            renderAgendas();
+            showToast('Agenda berhasil diduplikat', 'success');
+        }
+
         function handleAgendaSubmit(e) {
             e.preventDefault();
             if (!document.getElementById('input-time').value.trim() && !document.getElementById('input-session').value) {
@@ -1741,6 +1829,52 @@
             showToast('Agenda liputan telah dihapus', 'info');
         }
 
+        // ===== FITUR BARU: CLEAR AGENDA MASAL =====
+        function openClearAgendaModal() {
+            const modal = document.getElementById('clear-agenda-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+            lucide.createIcons();
+        }
+
+        function closeClearAgendaModal() {
+            const modal = document.getElementById('clear-agenda-modal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        function clearPastAgendas() {
+            const todayStr = getTodayStr();
+            const initialCount = agendas.length;
+            agendas = agendas.filter(a => a.date >= todayStr);
+            const removed = initialCount - agendas.length;
+            saveAgendas();
+            renderAgendas();
+            closeClearAgendaModal();
+            showToast(`${removed} agenda lampau berhasil dibersihkan`, 'success');
+        }
+
+        function clearTodayAgendas() {
+            const todayStr = getTodayStr();
+            const initialCount = agendas.length;
+            agendas = agendas.filter(a => a.date !== todayStr);
+            const removed = initialCount - agendas.length;
+            saveAgendas();
+            renderAgendas();
+            closeClearAgendaModal();
+            showToast(`${removed} agenda hari ini berhasil dibersihkan`, 'success');
+        }
+
+        function clearAllAgendas() {
+            if (!confirm('Apakah Anda yakin ingin MENGOSONGKAN SELURUH agenda? Tindakan ini tidak dapat dibatalkan.')) return;
+            const removed = agendas.length;
+            agendas = [];
+            saveAgendas();
+            renderAgendas();
+            closeClearAgendaModal();
+            showToast(`${removed} agenda berhasil dikosongkan total`, 'info');
+        }
+
         // AI FEATURE 1: GENERATE ANGLE & QUESTIONS
         async function generateAiAngleAndQuestions() {
             const title = document.getElementById('input-title').value.trim();
@@ -1814,9 +1948,9 @@ Format teks langsung dan padat untuk catatan reporter lapangan.`;
             }
         }
 
-        // IMAGE UPLOAD (poster / screenshot undangan) -> dibaca langsung oleh Gemini (multimodal)
+        // IMAGE UPLOAD (poster / screenshot undangan)
         const MAX_IMAGES = 5;
-        let pendingImages = []; // { name, mimeType, data (base64), preview }
+        let pendingImages = [];
 
         function resizeImage(file, maxDim = 1800) {
             return new Promise((resolve, reject) => {
@@ -1879,7 +2013,6 @@ Format teks langsung dan padat untuk catatan reporter lapangan.`;
                 </div>`).join('');
         }
 
-        // Tempel screenshot (Ctrl+V) saat modal ekstrak terbuka
         document.addEventListener('paste', (e) => {
             const modal = document.getElementById('ai-parse-modal');
             if (!modal || modal.classList.contains('hidden')) return;
@@ -1887,12 +2020,12 @@ Format teks langsung dan padat untuk catatan reporter lapangan.`;
                 .filter(it => it.kind === 'file' && it.type.startsWith('image/'))
                 .map(it => it.getAsFile())
                 .filter(Boolean);
-            if (!files.length) return; // tempel teks biasa tetap normal
+            if (!files.length) return;
             e.preventDefault();
             addImageFiles(files);
         });
 
-        // AI FEATURE 2: PARSE UNDANGAN MEDIA / WA RELEASE / PDF / GAMBAR
+        // AI FEATURE 2: PARSE UNDANGAN MEDIA
         function openAiParseModal() {
             pendingImages = [];
             renderImagePreviews();
@@ -2051,7 +2184,7 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
             }
         }
 
-        // ===== PENGATURAN BRIEFING WA (jam live, host, PL) - disimpan per tanggal =====
+        // PENGATURAN BRIEFING WA
         const WA_SETTINGS_KEY = 'kumparan_wa_settings_v1';
         const WA_FIELDS = { liveTime: 'wa-live-time', hostPagi: 'wa-host-pagi', plPagi: 'wa-pl-pagi', hostSore: 'wa-host-sore', plSore: 'wa-pl-sore' };
 
@@ -2090,8 +2223,7 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
             }
         }
 
-        // ===== EXPORT FORMAT WA (per reporter) =====
-        // Jam: "14:00 WIB" -> "14.00 WIB"; tambah WIB jika zona belum ada
+        // EXPORT FORMAT WA
         function waTime(t) {
             if (!t) return '';
             let out = t.trim().replace(/(\d{1,2}):(\d{2})/g, '$1.$2');
@@ -2120,7 +2252,6 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
             return `${day} (${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')})`;
         }
 
-        // Label & urutan sesi di briefing WA. Live pagi/sore mengikuti jenis live, bukan jam.
         function waSessionInfo(item) {
             if (item.liveType === 'live_pagi') return { label: 'Pagi Live', order: 0 };
             if (item.liveType === 'live_sore') return { label: 'Sore Live', order: 2 };
@@ -2145,7 +2276,6 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
             const list = sortByTime(agendas.filter(a => a.date === dateStr));
             const cfg = readWaSettings();
 
-            // Host otomatis dari agenda Live; jam live pagi dari agenda Live Pagi
             const autoHostPagi = uniqueNames(list, 'live_pagi');
             const autoHostSore = uniqueNames(list, 'live_sore');
             const livePagi = list.find(a => a.liveType === 'live_pagi' && a.time);
@@ -2159,7 +2289,6 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
             const hostSore = cfg.hostSore || autoHostSore;
             const liveTime = cfg.liveTime ? waTime(cfg.liveTime) : (autoLiveTime ? waTime(autoLiveTime) : '');
 
-            // Blok Live Bisnis Update
             const liveGroups = [];
             if (liveTime) liveGroups.push(`Live Bisnis Update pagi ${liveTime}`);
             const pagiGroup = [hostPagi && `Host pagi: ${hostPagi}`, cfg.plPagi && `PL pagi: ${cfg.plPagi}`].filter(Boolean);
@@ -2170,7 +2299,6 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
 
             let out = `Agenda kumparanBisnis, ${waDayLabel(dateStr)}\n\n===`;
 
-            // Kelompokkan per reporter (agenda dengan 2 reporter muncul di keduanya)
             const groups = {};
             list.forEach(a => {
                 const names = splitReporters(a.reporter);
@@ -2184,7 +2312,6 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
 
             const reporterGroups = Object.values(groups).sort((x, y) => {
                 if (x.unassigned !== y.unassigned) return x.unassigned ? 1 : -1;
-                // Urut berdasarkan jam agenda paling awal yang punya jam; yang hanya Stanby/tanpa jam menyusul
                 const rank = g => {
                     const timed = g.items.map(a => timeToMinutes(a.time)).filter(m => m !== null);
                     return timed.length ? Math.min(...timed) : 10000 + Math.min(...g.items.map(sortMinutes));
@@ -2201,7 +2328,6 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
             out += liveBlock ? `\n${liveBlock}\n\n===\n\n` : `\n\n`;
 
             const reporterBlocks = reporterGroups.map(g => {
-                // Kelompokkan per sesi
                 const sess = {};
                 g.items.forEach(a => {
                     const info = waSessionInfo(a);
@@ -2273,7 +2399,7 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
             showToast('File agenda .txt berhasil diunduh', 'success');
         }
 
-        // ===== CADANGAN DATA (EKSPOR / IMPOR) =====
+        // CADANGAN DATA
         const BACKUP_FORMAT = 'kumparan-bisnis-backup';
         const BACKUP_VERSION = 1;
         const AGENDA_STR_FIELDS = ['title', 'time', 'session', 'date', 'liveType', 'reporter', 'location', 'priority', 'status', 'angle', 'contact'];
@@ -2313,7 +2439,6 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
             showToast(`Cadangan ${agendas.length} agenda berhasil diunduh`, 'success');
         }
 
-        // Bersihkan satu agenda dari file impor: hanya field yang dikenal, tipe dipaksa aman
         function sanitizeImportedAgenda(a) {
             if (!a || typeof a !== 'object' || typeof a.title !== 'string' || !a.title.trim()) return null;
             const out = { id: String(a.id || (Date.now() + Math.random().toString(36).slice(2, 8))) };
@@ -2358,7 +2483,6 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
                 }
                 saveAgendas();
 
-                // Isian host/PL per tanggal
                 if (data.waSettings && typeof data.waSettings === 'object') {
                     const current = mode === 'replace' ? {} : readAllWaSettings();
                     Object.entries(data.waSettings).forEach(([d, v]) => {
@@ -2380,7 +2504,7 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
             }
         }
 
-        // ===== TAB OUTPUT LIPUTAN =====
+        // TAB OUTPUT LIPUTAN
         const OUTPUT_TYPES = [
             { key: 'artikel', label: 'Artikel' },
             { key: 'reels',   label: 'Reels' },
@@ -2459,7 +2583,6 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
 
             let list = agendas.filter(a => allDates || a.date === dateInput.value);
 
-            // Ringkasan per jenis output (dihitung dari agenda pada cakupan tanggal, sebelum filter "belum terbit")
             document.getElementById('output-summary').innerHTML = OUTPUT_TYPES.map(t => {
                 const c = { rencana: 0, draft: 0, terbit: 0 };
                 list.forEach(a => { const s = getOutput(a, t.key).status; if (s) c[s]++; });
@@ -2477,7 +2600,6 @@ Gunakan gaya bahasa khas kumparan: tajam, lugas, kredibel, dan mudah dibaca cepa
                 }));
             }
 
-            // Tanggal terbaru dulu, lalu urut jam
             list = [...list].sort((a, b) => (a.date === b.date ? sortMinutes(a) - sortMinutes(b) : (a.date < b.date ? 1 : -1)));
 
             const body = document.getElementById('output-table-body');
